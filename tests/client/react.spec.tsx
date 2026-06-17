@@ -441,3 +441,104 @@ test.group('react | prefetch', (group) => {
     assert.equal(calls, 1) // open reused the prefetched response
   })
 })
+
+test.group('react | close behaviors', (group) => {
+  group.each.teardown(() => cleanup())
+
+  test('closeButton={false} hides the close button', async ({ assert }) => {
+    function NoButton() {
+      return <Modal closeButton={false}>body</Modal>
+    }
+    const { container } = renderApp({
+      component: NoButton,
+      client: clientReturning({ component: 'm', props: {}, key: 'k1' }),
+      ui: <ModalLink href="/m">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('body')
+    assert.isNull(container.querySelector('.im-close-button'))
+  })
+
+  test('clicking the backdrop closes the modal by default', async ({ assert }) => {
+    const { container } = renderApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'B' }, key: 'k1' }),
+      ui: <ModalLink href="/m">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('User: B')
+
+    fireEvent.click(container.querySelector('.im-dialog')!)
+    await waitFor(() => assert.isNull(screen.queryByText('User: B')))
+  })
+
+  test('closeExplicitly blocks Esc and backdrop, but the close button still closes', async ({
+    assert,
+  }) => {
+    const { container } = renderApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'B' }, key: 'k1' }),
+      ui: (
+        <ModalLink href="/m" config={{ closeExplicitly: true }}>
+          Open
+        </ModalLink>
+      ),
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('User: B')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.click(container.querySelector('.im-dialog')!)
+    assert.isNotNull(screen.queryByText('User: B')) // still open
+
+    fireEvent.click(screen.getByText('close-modal'))
+    await waitFor(() => assert.isNull(screen.queryByText('User: B')))
+  })
+
+  test('Esc closes only the top modal in a stack', async ({ assert }) => {
+    function ModalA() {
+      return (
+        <Modal>
+          <ModalLink href="/b">open-b</ModalLink>
+        </Modal>
+      )
+    }
+    function ModalB() {
+      return (
+        <Modal>
+          <span>Modal B</span>
+        </Modal>
+      )
+    }
+    const client: HttpClientLike = {
+      request: ({ url }) =>
+        Promise.resolve({
+          data: {
+            props: {
+              modal: url.includes('/b')
+                ? { component: 'mod/b', props: {}, key: 'kb' }
+                : { component: 'mod/a', props: {}, key: 'ka' },
+            },
+          },
+        }),
+    }
+
+    renderApp({
+      client,
+      resolve: async (name) => (name === 'mod/b' ? ModalB : ModalA),
+      ui: <ModalLink href="/a">open-a</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('open-a'))
+    fireEvent.click(await screen.findByText('open-b'))
+    await screen.findByText('Modal B')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => assert.isNull(screen.queryByText('Modal B'))) // top closed
+    assert.isNotNull(screen.queryByText('open-b')) // parent still open
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => assert.isNull(screen.queryByText('open-b'))) // parent closed
+  })
+})
