@@ -707,6 +707,43 @@ test.group('vue | presentation & helpers', (group) => {
     assert.isTrue(panel.classList.contains('custom-panel'))
   })
 
+  test('the <Modal> page can declare its own presentation', async ({ assert }) => {
+    const SlideoverPage = defineComponent({
+      setup() {
+        return () =>
+          h(Modal, { slideover: true, maxWidth: 'lg' }, { default: () => h('span', 'Body') })
+      },
+    })
+    const { wrapper } = mountApp({
+      component: SlideoverPage,
+      client: clientReturning({ component: 'm', props: {}, key: 'k1' }),
+      ui: () => h(ModalLink, { href: '/m' }, { default: () => 'Open' }),
+    })
+
+    await clickText(wrapper, 'Open')
+    await tick()
+    assert.isNotNull(document.querySelector('.im-slideover'))
+    assert.isNotNull(document.querySelector('.im-panel.im-max-w-lg'))
+  })
+
+  test("the opener's config overrides the <Modal> presentation props", async ({ assert }) => {
+    const SlideoverPage = defineComponent({
+      setup() {
+        return () => h(Modal, { slideover: true }, { default: () => h('span', 'Body') })
+      },
+    })
+    const { wrapper } = mountApp({
+      component: SlideoverPage,
+      client: clientReturning({ component: 'm', props: {}, key: 'k1' }),
+      ui: () =>
+        h(ModalLink, { href: '/m', config: { slideover: false } }, { default: () => 'Open' }),
+    })
+
+    await clickText(wrapper, 'Open')
+    await tick()
+    assert.isNull(document.querySelector('.im-slideover'))
+  })
+
   test('navigate mode opens the route as a full page instead of a modal', async ({ assert }) => {
     let navigatedTo: string | null = null
     let requested = false

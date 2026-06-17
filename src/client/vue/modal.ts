@@ -5,7 +5,7 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { getConfigByType } from '../core/config.ts'
-import { resolvePanelClasses } from '../core/presentation.ts'
+import { mergePresentation, resolvePanelClasses } from '../core/presentation.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
@@ -28,7 +28,17 @@ export const Modal = defineComponent({
   props: {
     /** When set, this is a local (client-only) modal opened via href="#name". */
     name: { type: String, required: false },
-    closeButton: { type: Boolean, default: true },
+    // Presentation overrides the modal page can declare on itself; the opener's
+    // per-modal config (ModalLink `config`) still wins. Default undefined so an
+    // unset prop falls through to the opener config / global config.
+    closeButton: { type: Boolean, default: undefined },
+    closeExplicitly: { type: Boolean, default: undefined },
+    closeOnClickOutside: { type: Boolean, default: undefined },
+    slideover: { type: Boolean, default: undefined },
+    maxWidth: { type: String, default: undefined },
+    position: { type: String, default: undefined },
+    paddingClasses: { type: String, default: undefined },
+    panelClasses: { type: String, default: undefined },
   },
   emits: ['close'],
   setup(props, { slots, emit }) {
@@ -145,8 +155,23 @@ export const Modal = defineComponent({
       const m = modal.value
       if (!m) return null
 
-      const isSlideover = m.config.slideover === true
-      const position = typeof m.config.position === 'string' ? m.config.position : undefined
+      // The opener's per-modal config wins over the page's <Modal> props.
+      const config = mergePresentation(
+        {
+          closeButton: props.closeButton,
+          closeExplicitly: props.closeExplicitly,
+          closeOnClickOutside: props.closeOnClickOutside,
+          slideover: props.slideover,
+          maxWidth: props.maxWidth,
+          position: props.position,
+          paddingClasses: props.paddingClasses,
+          panelClasses: props.panelClasses,
+        },
+        m.config
+      )
+
+      const isSlideover = config.slideover === true
+      const position = typeof config.position === 'string' ? config.position : undefined
       const dialogClass = [
         'im-dialog',
         isSlideover ? 'im-slideover' : 'im-modal',
@@ -155,14 +180,12 @@ export const Modal = defineComponent({
         .filter(Boolean)
         .join(' ')
 
-      const closeExplicitly = m.config.closeExplicitly === true
-      const closeOnClickOutside = m.config.closeOnClickOutside !== false
-      // Shown unless turned off by the prop, the per-modal config, or the global
-      // config (putConfig) for this modal type.
+      const closeExplicitly = config.closeExplicitly === true
+      const closeOnClickOutside = config.closeOnClickOutside !== false
+      // Shown unless turned off by the <Modal> prop, the opener's config, or the
+      // global config (putConfig) for this modal type.
       const showCloseButton =
-        props.closeButton !== false &&
-        m.config.closeButton !== false &&
-        getConfigByType(isSlideover, 'closeButton') !== false
+        config.closeButton !== false && getConfigByType(isSlideover, 'closeButton') !== false
 
       return h(
         'dialog',
@@ -188,7 +211,7 @@ export const Modal = defineComponent({
           h(
             'div',
             {
-              class: resolvePanelClasses(m.config, isSlideover),
+              class: resolvePanelClasses(config, isSlideover),
               onClick: (event: MouseEvent) => event.stopPropagation(),
             },
             [

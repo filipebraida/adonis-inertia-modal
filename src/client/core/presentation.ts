@@ -11,6 +11,25 @@
 import { getConfigByType } from './config.ts'
 import type { ModalOptions } from './types.ts'
 
+/**
+ * Effective presentation = the `<Modal>` component's props overlaid by the
+ * opener's per-modal config (ModalLink `config` / visit `config` wins, since
+ * it's the most specific intent for this open). Undefined component props are
+ * dropped so they fall through to the opener config / global config.
+ */
+export function mergePresentation(
+  componentProps: Record<string, unknown>,
+  entryConfig: ModalOptions
+): ModalOptions {
+  const defined: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(componentProps)) {
+    if (value !== undefined) {
+      defined[key] = value
+    }
+  }
+  return { ...defined, ...entryConfig }
+}
+
 export function resolvePanelClasses(config: ModalOptions, isSlideover: boolean): string {
   const pick = (key: string): string => {
     const value = config[key] ?? getConfigByType(isSlideover, key)

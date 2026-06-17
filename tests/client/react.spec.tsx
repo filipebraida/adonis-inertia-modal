@@ -717,6 +717,49 @@ test.group('react | presentation & helpers', (group) => {
     assert.isTrue(panel.classList.contains('custom-panel'))
   })
 
+  test('the <Modal> page can declare its own presentation', async ({ assert }) => {
+    function SlideoverPage() {
+      return (
+        <Modal slideover maxWidth="lg">
+          <span>Body</span>
+        </Modal>
+      )
+    }
+    const { container } = renderApp({
+      component: SlideoverPage,
+      client: clientReturning({ component: 'm', props: {}, key: 'k1' }),
+      ui: <ModalLink href="/m">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('Body')
+    assert.isNotNull(container.querySelector('.im-slideover'))
+    assert.isNotNull(container.querySelector('.im-panel.im-max-w-lg'))
+  })
+
+  test("the opener's config overrides the <Modal> presentation props", async ({ assert }) => {
+    function SlideoverPage() {
+      return (
+        <Modal slideover>
+          <span>Body</span>
+        </Modal>
+      )
+    }
+    const { container } = renderApp({
+      component: SlideoverPage,
+      client: clientReturning({ component: 'm', props: {}, key: 'k1' }),
+      ui: (
+        <ModalLink href="/m" config={{ slideover: false }}>
+          Open
+        </ModalLink>
+      ),
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('Body')
+    assert.isNull(container.querySelector('.im-slideover'))
+  })
+
   test('navigate mode opens the route as a full page instead of a modal', async ({ assert }) => {
     let navigatedTo: string | null = null
     let requested = false
