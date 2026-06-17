@@ -7,6 +7,19 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
+### Unreleased (since beta.2)
+
+- **Breaking:** the backdrop is now a required 3rd argument of `inertia.modal()`,
+  typed `{ route, params?, qs? } | { url }`, instead of the chainable `.baseRoute()`
+  / `.baseUrl()` (removed). It can no longer be forgotten (it won't compile), and
+  the shape mirrors the AdonisJS router's explicit route-vs-path convention.
+  ```ts
+  // before
+  inertia.modal('users/show', { user }).baseRoute('users.index')
+  // after
+  inertia.modal('users/show', { user }, { route: 'users.index' })
+  ```
+
 ### beta.2
 
 Closes the remaining inertiaui/modal feature-parity gaps.

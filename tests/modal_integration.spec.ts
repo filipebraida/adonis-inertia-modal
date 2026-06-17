@@ -76,9 +76,11 @@ test.group('ModalResponse | integration', (group) => {
     setupViewMacroMock()
     const { inertia } = await modalContext() // no x-inertia header → direct access
 
-    const result: any = await inertia
-      .modal('users/show', { user: { id: 1 } })
-      .baseRoute('users.index')
+    const result: any = await inertia.modal(
+      'users/show',
+      { user: { id: 1 } },
+      { route: 'users.index' }
+    )
 
     // HTML path returns the mocked view { view, props: { page } }
     assert.equal(result.props.page.component, 'users/index')
@@ -97,9 +99,11 @@ test.group('ModalResponse | integration', (group) => {
       [InertiaHeaders.PartialOnly]: 'modal',
     })
 
-    const page: any = await inertia
-      .modal('users/show', { user: { id: 1 } })
-      .baseRoute('users.index')
+    const page: any = await inertia.modal(
+      'users/show',
+      { user: { id: 1 } },
+      { route: 'users.index' }
+    )
 
     assert.equal(page.component, 'users/index')
     assert.properties(page.props, ['modal'])
@@ -117,8 +121,7 @@ test.group('ModalResponse | integration', (group) => {
     assert.isUndefined(ctx.route)
 
     await inertia
-      .modal('users/show', { user: { id: 1 } })
-      .baseRoute('users.index')
+      .modal('users/show', { user: { id: 1 } }, { route: 'users.index' })
       .refreshBackdrop()
 
     // After re-dispatching the backdrop, the modal route's (empty) state is back.
@@ -132,7 +135,7 @@ test.group('ModalResponse | integration', (group) => {
     backdropDispatches = 0
     const { inertia } = await modalContext({ [InertiaHeaders.Inertia]: 'true' }, '/counter/1')
 
-    const builder = inertia.modal('counter/show', {}).baseRoute('counter.index').refreshBackdrop()
+    const builder = inertia.modal('counter/show', {}, { route: 'counter.index' }).refreshBackdrop()
     const first = await builder
     const second = await builder
 
@@ -146,8 +149,7 @@ test.group('ModalResponse | integration', (group) => {
     const { inertia } = await modalContext({ [InertiaHeaders.Inertia]: 'true' })
 
     const page: any = await inertia
-      .modal('users/show', { user: { id: 1 } })
-      .baseRoute('users.index')
+      .modal('users/show', { user: { id: 1 } }, { route: 'users.index' })
       .refreshBackdrop()
 
     // Backdrop was re-rendered (its own props are present), with the modal alongside
@@ -171,7 +173,7 @@ test.group('ModalResponse | integration', (group) => {
       },
     }
 
-    const page: any = await inertia.modal('users/show', {}).baseRoute('users.index')
+    const page: any = await inertia.modal('users/show', {}, { route: 'users.index' })
 
     assert.equal(page.props.modal.key, 'reused-key')
   })
@@ -184,7 +186,7 @@ test.group('ModalResponse | integration', (group) => {
       'x-inertia-modal-key': 'previous-key',
     })
 
-    const page: any = await inertia.modal('users/show', {}).baseRoute('users.index')
+    const page: any = await inertia.modal('users/show', {}, { route: 'users.index' })
 
     assert.notEqual(page.props.modal.key, 'previous-key')
   })
@@ -198,12 +200,14 @@ test.group('ModalResponse | integration', (group) => {
       [InertiaHeaders.PartialOnly]: 'modal',
     })
 
-    const page: any = await inertia
-      .modal('users/show', {
+    const page: any = await inertia.modal(
+      'users/show',
+      {
         user: { id: 1 },
-        stats: (inertia as any).defer(() => ({ visits: 5 })),
-      })
-      .baseRoute('users.index')
+        stats: inertia.defer(() => ({ visits: 5 })),
+      },
+      { route: 'users.index' }
+    )
 
     assert.equal(page.props.modal.props.user.id, 1)
     assert.notProperty(page.props.modal.props, 'stats')
@@ -218,12 +222,14 @@ test.group('ModalResponse | integration', (group) => {
       'x-inertia-modal-key': 'kept-key',
     })
 
-    const page: any = await inertia
-      .modal('users/show', {
+    const page: any = await inertia.modal(
+      'users/show',
+      {
         user: { id: 1 },
-        stats: (inertia as any).defer(() => ({ visits: 5 })),
-      })
-      .baseRoute('users.index')
+        stats: inertia.defer(() => ({ visits: 5 })),
+      },
+      { route: 'users.index' }
+    )
 
     assert.deepEqual(page.props.modal.props.stats, { visits: 5 })
     assert.notProperty(page.props.modal.props, 'user')
@@ -237,11 +243,11 @@ test.group('ModalResponse | integration', (group) => {
       [InertiaHeaders.PartialOnly]: 'modal',
     })
 
-    const page: any = await inertia
-      .modal('users/show', {
-        thing: ThingTransformer.transform({ id: 1, name: 'Ada', secret: 'hide-me' }),
-      })
-      .baseRoute('users.index')
+    const page: any = await inertia.modal(
+      'users/show',
+      { thing: ThingTransformer.transform({ id: 1, name: 'Ada', secret: 'hide-me' }) },
+      { route: 'users.index' }
+    )
 
     // The lazy transformer Item is resolved to its plain (picked) object.
     assert.deepEqual(page.props.modal.props.thing, { id: 1, name: 'Ada' })
@@ -254,8 +260,9 @@ test.group('ModalResponse | integration', (group) => {
       [InertiaHeaders.PartialOnly]: 'modal',
     })
 
-    const page: any = await inertia
-      .modal('authors/show', {
+    const page: any = await inertia.modal(
+      'authors/show',
+      {
         author: AuthorTransformer.transform({
           id: 1,
           name: 'Ada',
@@ -264,8 +271,9 @@ test.group('ModalResponse | integration', (group) => {
             { id: 11, title: 'Engine' },
           ],
         }),
-      })
-      .baseRoute('users.index')
+      },
+      { route: 'users.index' }
+    )
 
     assert.deepEqual(page.props.modal.props.author, {
       id: 1,

@@ -24,9 +24,15 @@ test.group('ModalResponse | via link (Path A)', () => {
   }) => {
     const { ctx, inertia } = viaLink('users/index')
 
-    const page: any = await new ModalResponse(inertia, ctx, 'users/show', { user: { id: 1 } })
-      .baseUrl('/users')
-      .render()
+    const page: any = await new ModalResponse(
+      inertia,
+      ctx,
+      'users/show',
+      { user: { id: 1 } },
+      {
+        url: '/users',
+      }
+    ).render()
 
     assert.equal(page.component, 'users/index')
     assert.properties(page.props, ['modal'])
@@ -42,22 +48,29 @@ test.group('ModalResponse | via link (Path A)', () => {
   }) => {
     const { ctx, inertia } = viaLink('users/index')
 
-    const page: any = await new ModalResponse(inertia, ctx, 'users/show', {
-      'stats.today': 5,
-      'stats.total': () => 99,
-    })
-      .baseUrl('/users')
-      .render()
+    const page: any = await new ModalResponse(
+      inertia,
+      ctx,
+      'users/show',
+      { 'stats.today': 5, 'stats.total': () => 99 },
+      { url: '/users' }
+    ).render()
 
     assert.deepEqual(page.props.modal.props, { stats: { today: 5, total: 99 } })
   })
 
-  test('resolves the backdrop URL from a route name via baseRoute()', async ({ assert }) => {
+  test('exposes the backdrop url as the close redirect target', async ({ assert }) => {
     const { ctx, inertia } = viaLink('users/index')
 
-    const page: any = await new ModalResponse(inertia, ctx, 'users/show')
-      .baseUrl('/users') // baseUrl wins; baseRoute is covered by integration tests
-      .render()
+    const page: any = await new ModalResponse(
+      inertia,
+      ctx,
+      'users/show',
+      {},
+      {
+        url: '/users',
+      }
+    ).render()
 
     assert.equal(page.props.modal.redirectUrl, '/users')
   })
@@ -66,8 +79,9 @@ test.group('ModalResponse | via link (Path A)', () => {
     const { ctx, inertia } = viaLink('users/index')
     const original = { user: { id: 1 } }
 
-    const page: any = await new ModalResponse(inertia, ctx, 'users/show', original)
-      .baseUrl('/users')
+    const page: any = await new ModalResponse(inertia, ctx, 'users/show', original, {
+      url: '/users',
+    })
       .with('extra', true)
       .render()
 
@@ -81,7 +95,15 @@ test.group('ModalResponse | redirect safety', () => {
     const { ctx, inertia } = viaLink('users/index')
     ctx.request.request.headers['x-inertia-modal-redirect'] = '/dashboard?tab=1'
 
-    const page: any = await new ModalResponse(inertia, ctx, 'users/show').baseUrl('/users').render()
+    const page: any = await new ModalResponse(
+      inertia,
+      ctx,
+      'users/show',
+      {},
+      {
+        url: '/users',
+      }
+    ).render()
 
     assert.equal(page.props.modal.redirectUrl, '/dashboard?tab=1')
   })
@@ -92,19 +114,16 @@ test.group('ModalResponse | redirect safety', () => {
     const { ctx, inertia } = viaLink('users/index')
     ctx.request.request.headers['x-inertia-modal-redirect'] = 'https://evil.example/phish'
 
-    const page: any = await new ModalResponse(inertia, ctx, 'users/show').baseUrl('/users').render()
+    const page: any = await new ModalResponse(
+      inertia,
+      ctx,
+      'users/show',
+      {},
+      {
+        url: '/users',
+      }
+    ).render()
 
     assert.equal(page.props.modal.redirectUrl, '/users')
-  })
-})
-
-test.group('ModalResponse | validation', () => {
-  test('throws when no backdrop URL is configured', async ({ assert }) => {
-    const { ctx, inertia } = viaLink('users/index')
-
-    await assert.rejects(
-      () => new ModalResponse(inertia, ctx, 'users/show').render(),
-      /backdrop URL is required/
-    )
   })
 })

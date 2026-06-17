@@ -11,7 +11,7 @@ import { InertiaHeaders } from '@adonisjs/inertia'
 
 import { ModalHeaders } from './headers.ts'
 import { resolveModalProps, type ResolveModalPropsOptions } from './resolve_modal_props.ts'
-import type { ModalPayload, ModalProps } from './types.ts'
+import type { Backdrop, ModalPayload, ModalProps } from './types.ts'
 
 /**
  * Serializes modal prop values the same way the Inertia adapter serializes
@@ -43,7 +43,7 @@ interface InertiaLike {
  */
 export interface RouterLike {
   usingDomains: boolean
-  makeUrl(name: string, params?: any[] | Record<string, any>): string
+  makeUrl(name: string, params?: any[] | Record<string, any>, options?: Record<string, any>): string
   match(uri: string, method: string, shouldDecodeParam: boolean, hostname?: string | null): any
 }
 
@@ -66,7 +66,6 @@ export interface RouterLike {
  * See docs/design/spike-server-dispatch.md for the full rationale.
  */
 export class ModalResponse {
-  #baseUrl?: string
   #refreshBackdrop = false
   #forceBase = false
   #renderPromise?: Promise<unknown>
@@ -77,28 +76,13 @@ export class ModalResponse {
     private inertia: InertiaLike,
     private ctx: HttpContext,
     private component: string,
-    props: ModalProps = {},
+    props: ModalProps,
+    private backdrop: Backdrop,
     private router?: RouterLike
   ) {
     // Copy so `.with(...)` never mutates the caller's object (a controller may
     // reuse or share the props it passes in).
     this.props = { ...props }
-  }
-
-  /**
-   * Set the backdrop URL directly.
-   */
-  baseUrl(url: string): this {
-    this.#baseUrl = url
-    return this
-  }
-
-  /**
-   * Set the backdrop URL from a registered route name.
-   */
-  baseRoute(name: string, params?: any[] | Record<string, any>): this {
-    this.#baseUrl = this.#requireRouter().makeUrl(name, params)
-    return this
   }
 
   /**
@@ -134,7 +118,7 @@ export class ModalResponse {
 
   /**
    * Make the builder awaitable, so a controller can simply
-   * `return inertia.modal(...).baseRoute(...)`.
+   * `return inertia.modal(component, props, backdrop)`.
    */
   then<T>(
     onfulfilled?: ((value: any) => T | PromiseLike<T>) | null,
@@ -203,7 +187,7 @@ export class ModalResponse {
     if (!matched) {
       throw new Error(
         `adonis-inertia-modal: could not resolve a GET route for the backdrop URL "${baseUrl}". ` +
-          `Make sure the route passed to baseRoute()/baseUrl() exists.`
+          `Make sure the backdrop route/url passed to inertia.modal(...) exists.`
       )
     }
 
@@ -397,12 +381,12 @@ export class ModalResponse {
   }
 
   #resolveBaseUrl(): string {
-    if (!this.#baseUrl) {
-      throw new Error(
-        'adonis-inertia-modal: a backdrop URL is required. Call baseRoute() or baseUrl() on the modal response.'
-      )
+    const backdrop = this.backdrop
+    if ('url' in backdrop) {
+      return backdrop.url
     }
-    return this.#baseUrl
+    const options = backdrop.qs ? { qs: backdrop.qs } : undefined
+    return this.#requireRouter().makeUrl(backdrop.route, backdrop.params, options)
   }
 
   #requireRouter(): RouterLike {

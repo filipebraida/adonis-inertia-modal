@@ -18,7 +18,7 @@ export default class UsersController {
   async show({ inertia, params }: HttpContext) {
     const user = await User.findOrFail(params.id)
 
-    return inertia.modal('users/show', { user }).baseRoute('users.index')
+    return inertia.modal('users/show', { user }, { route: 'users.index' })
   }
 }
 ```
@@ -143,28 +143,38 @@ and all features below are identical across React and Vue.
 
 ## Server API
 
-`inertia.modal(component, props?)` returns a chainable, awaitable builder — just
-`return` it from a controller.
+`inertia.modal(component, props, backdrop)` returns a chainable, awaitable builder
+— just `return` it from a controller.
+
+The **`backdrop`** (3rd argument) is **required**: it's the page rendered behind
+the modal and where it navigates on close. It's typed `{ route, params?, qs? } | { url }`,
+so a modal can't be declared without one:
+
+```ts
+inertia.modal('users/show', { user }, { route: 'users.index' })
+inertia.modal('users/show', { user }, { route: 'users.show', params: { id } })
+inertia.modal('users/show', { user }, { url: '/users' })
+```
 
 | Method                               | Description                                            |
 | ------------------------------------ | ------------------------------------------------------ |
-| `.baseRoute(name, params?)`          | Backdrop URL from a route name.                        |
-| `.baseUrl(url)`                      | Backdrop URL directly.                                 |
 | `.with(props)` / `.with(key, value)` | Merge extra props.                                     |
 | `.refreshBackdrop(refresh?)`         | Re-render the backdrop with fresh data.                |
-| `.forceBase(force?)`                 | Ignore referer/redirect header; close to the base URL. |
+| `.forceBase(force?)`                 | Ignore referer/redirect header; close to the backdrop. |
 
 Modal props support dot-notation keys (`'stats.today'`) and the adapter's prop
 wrappers **inside** the modal:
 
 ```ts
-return inertia
-  .modal('invoices/show', {
+return inertia.modal(
+  'invoices/show',
+  {
     invoice,
     lines: inertia.defer(() => invoice.related('lines').query()), // <Deferred>
     customer: inertia.optional(() => invoice.related('customer').query()), // <WhenVisible>
-  })
-  .baseRoute('invoices.index')
+  },
+  { route: 'invoices.index' }
+)
 ```
 
 ## Client API (React)
@@ -270,7 +280,7 @@ Pass `onError` to handle it your way (and silence the default log):
 ```
 
 In Vue, attach `@error`. To handle a missing record gracefully, prefer returning a
-modal from the server (`return inertia.modal('institutos/not-found', { id }).baseRoute(...)`)
+modal from the server (`return inertia.modal('institutos/not-found', { id }, { route: 'institutos.index' })`)
 or use `navigate` so the route opens as a full page (showing your real 404).
 
 ### Deferred / lazy props

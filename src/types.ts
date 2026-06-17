@@ -16,6 +16,17 @@
 export type ModalProps = Record<string, unknown>
 
 /**
+ * The backdrop page rendered behind the modal (and where it navigates on close /
+ * when opened directly). Required on every `inertia.modal(...)` so it can't be
+ * forgotten. Mirrors the AdonisJS router's explicit route-vs-path convention
+ * (`redirectToRoute(name, params, { qs })` vs `redirectToPath(url)`) — no
+ * leading-slash auto-detection.
+ */
+export type Backdrop =
+  | { route: string; params?: any[] | Record<string, any>; qs?: Record<string, any> }
+  | { url: string }
+
+/**
  * The serialized modal envelope sent to the client as the shared `modal` prop.
  */
 export interface ModalPayload {

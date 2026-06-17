@@ -9,18 +9,21 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { Inertia } from '@adonisjs/inertia'
 
 import { ModalResponse } from '../src/modal_response.ts'
-import type { ModalProps } from '../src/types.ts'
+import type { Backdrop, ModalProps } from '../src/types.ts'
 
 /**
  * Extend the Inertia instance with a `modal()` method so controllers can do:
  *
  * ```ts
- * return inertia.modal('users/show', { user }).baseRoute('users.index')
+ * return inertia.modal('users/show', { user }, { route: 'users.index' })
  * ```
+ *
+ * The backdrop is required (and typed `{ route } | { url }`), so a modal can't
+ * be declared without a page to render behind it / navigate to on close.
  */
 declare module '@adonisjs/inertia' {
   interface Inertia<Pages> {
-    modal(component: string, props?: ModalProps): ModalResponse
+    modal(component: string, props: ModalProps, backdrop: Backdrop): ModalResponse
   }
 }
 
@@ -39,10 +42,11 @@ export default class ModalProvider {
     Inertia.prototype.modal = function (
       this: Inertia<any>,
       component: string,
-      props: ModalProps = {}
+      props: ModalProps,
+      backdrop: Backdrop
     ) {
       const ctx = (this as unknown as { ctx: HttpContext }).ctx
-      return new ModalResponse(this as unknown as any, ctx, component, props, router)
+      return new ModalResponse(this as unknown as any, ctx, component, props, backdrop, router)
     }
   }
 }
