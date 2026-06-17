@@ -30,7 +30,9 @@ export const ModalRenderer = defineComponent({
           // Ignore a stale resolution if the entry's component changed while the
           // resolver was in flight (e.g. the slot at this index was replaced).
           if (ctx.stack.value[props.index]?.component === name) {
-            component.value = resolved
+            // Unwrap ES module namespaces (resolvers like resolvePageComponent
+            // return `{ default: Component }`).
+            component.value = (resolved as { default?: Component }).default ?? resolved
           }
         })
       },

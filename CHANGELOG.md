@@ -9,6 +9,9 @@ First usable release. React and Vue 3 support.
 
 ### Unreleased (since alpha.6)
 
+- ModalRenderer unwraps ES module namespaces from the resolver (`{ default: Component }`),
+  so custom `resolveComponent` using `resolvePageComponent` works (found validating the
+  Vue client in a real Inertia + AdonisJS app).
 - Graceful handling of non-modal responses when opening: an Inertia version
   mismatch (`409` + `X-Inertia-Location`) triggers a full reload, and a followed
   redirect (e.g. an expired session bounced to `/login`) navigates there — instead

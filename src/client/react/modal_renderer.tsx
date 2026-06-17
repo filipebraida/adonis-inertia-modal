@@ -20,7 +20,10 @@ export function ModalRenderer({ index }: { index: number }) {
     let active = true
     resolve(entry.component).then((resolved) => {
       if (active) {
-        setComponent(() => resolved)
+        // Unwrap ES module namespaces (resolvers like resolvePageComponent
+        // return `{ default: Component }`).
+        const component = (resolved as { default?: ComponentType }).default ?? resolved
+        setComponent(() => component)
       }
     })
     return () => {

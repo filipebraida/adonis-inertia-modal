@@ -89,6 +89,18 @@ test.group('react | ModalLink + ModalRoot', (group) => {
     assert.isNotNull(await screen.findByText('User: Jane'))
   })
 
+  test('resolves a component exported as an ES module ({ default })', async ({ assert }) => {
+    renderApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'Mod' }, key: 'k1' }),
+      resolve: async () => ({ default: ShowUser }) as never,
+      ui: <ModalLink href="/users/1">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+
+    assert.isNotNull(await screen.findByText('User: Mod'))
+  })
+
   test('useModal().close() removes the modal from the stack', async ({ assert }) => {
     renderApp({
       client: clientReturning({ component: 'users/show', props: { name: 'Jane' }, key: 'k1' }),

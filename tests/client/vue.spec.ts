@@ -126,6 +126,19 @@ test.group('vue | ModalLink + ModalRoot', (group) => {
     assert.include(wrapper.text(), 'User: Jane')
   })
 
+  test('resolves a component exported as an ES module ({ default })', async ({ assert }) => {
+    const { wrapper } = mountApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'Mod' }, key: 'k1' }),
+      resolve: async () => ({ default: ShowUser }) as never,
+      ui: () => h(ModalLink, { href: '/users/1' }, { default: () => 'Open' }),
+    })
+
+    await clickText(wrapper, 'Open')
+    await tick()
+
+    assert.include(wrapper.text(), 'User: Mod')
+  })
+
   test('opens the native <dialog> after mount (open=true)', async ({ assert }) => {
     // Regression: the initial open must run after the dialog ref is attached
     // (onMounted), not from an immediate watcher that fires pre-mount and is
