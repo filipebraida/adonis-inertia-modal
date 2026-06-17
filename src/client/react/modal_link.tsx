@@ -103,6 +103,12 @@ export function ModalLink({
     }
   }
 
+  // The event-bus listeners and lifecycle callbacks can change between renders
+  // (and `listeners` is a fresh object each render). Read them from a ref so the
+  // memoized `handle` always uses the latest, never a stale first-render closure.
+  const latest = useRef({ listeners, onStart, onSuccess, onError, onClose, onAfterLeave })
+  latest.current = { listeners, onStart, onSuccess, onError, onClose, onAfterLeave }
+
   const handle = useCallback(
     async (event?: MouseEvent) => {
       event?.preventDefault()
@@ -110,18 +116,19 @@ export function ModalLink({
         return
       }
       setLoading(true)
+      const callbacks = latest.current
       try {
         await visit(href, {
           method,
           data,
           headers,
           config: { ...config, ...(slideover !== undefined ? { slideover } : {}) },
-          onStart,
-          onSuccess,
-          onError,
-          onClose,
-          onAfterLeave,
-          listeners,
+          onStart: callbacks.onStart,
+          onSuccess: callbacks.onSuccess,
+          onError: callbacks.onError,
+          onClose: callbacks.onClose,
+          onAfterLeave: callbacks.onAfterLeave,
+          listeners: callbacks.listeners,
         })
       } catch {
         // onError already invoked inside visit()

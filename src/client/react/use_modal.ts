@@ -22,6 +22,9 @@ export interface UseModalReturn {
   on: (event: string, callback: (...args: unknown[]) => void) => () => void
 }
 
+/** Stable empty-errors reference so consumers keying effects on `errors` don't churn. */
+const EMPTY_ERRORS: Record<string, string> = {}
+
 /**
  * Build the public modal instance from a stack entry + the stack context.
  */
@@ -29,7 +32,7 @@ function createModalInstance(entry: ModalEntry, ctx: ModalStackContextValue): Us
   return {
     id: entry.id,
     props: entry.props,
-    errors: (ctx.page.props?.errors as Record<string, string>) ?? {},
+    errors: (ctx.page.props?.errors as Record<string, string>) ?? EMPTY_ERRORS,
     config: entry.config,
     isOpen: entry.isOpen,
     index: entry.index,

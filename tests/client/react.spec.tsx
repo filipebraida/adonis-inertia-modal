@@ -344,6 +344,42 @@ test.group('react | nested, slideover & event bus', (group) => {
 
     assert.equal(received, 'hi')
   })
+
+  test('ModalLink uses the latest event-bus listener after a re-render', async ({ assert }) => {
+    const received: string[] = []
+    function Emitter() {
+      const modal = useModal()!
+      return (
+        <Modal>
+          <button type="button" onClick={() => modal.emit('saved')}>
+            do-save
+          </button>
+        </Modal>
+      )
+    }
+    function Harness({ handler }: { handler: () => void }) {
+      return (
+        <ModalStackProvider
+          httpClient={clientReturning({ component: 'm', props: {}, key: 'k1' })}
+          resolveComponent={async () => Emitter as never}
+        >
+          <ModalLink href="/m" onSaved={handler}>
+            open
+          </ModalLink>
+          <ModalRoot usePageHook={() => basePage} />
+        </ModalStackProvider>
+      )
+    }
+
+    const { rerender } = render(<Harness handler={() => received.push('first')} />)
+    // Swap the listener before opening the modal.
+    rerender(<Harness handler={() => received.push('second')} />)
+
+    fireEvent.click(screen.getByText('open'))
+    fireEvent.click(await screen.findByText('do-save'))
+
+    assert.deepEqual(received, ['second'])
+  })
 })
 
 test.group('react | local modals', (group) => {

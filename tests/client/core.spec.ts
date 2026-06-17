@@ -161,6 +161,21 @@ test.group('core | ModalStack', () => {
     assert.isTrue(stack.get('k1')!.onTopOfStack)
   })
 
+  test('reset fires onAfterLeave for teardown (not onClose) and clears the stack', ({ assert }) => {
+    const stack = new ModalStack()
+    const events: string[] = []
+    stack.push(
+      { component: 'a', props: {}, key: 'k1' },
+      { onClose: () => events.push('close'), onAfterLeave: () => events.push('afterLeave') }
+    )
+
+    stack.reset()
+
+    assert.equal(stack.length, 0)
+    // onClose is skipped (a deep-link modal's onClose navigates → would loop).
+    assert.deepEqual(events, ['afterLeave'])
+  })
+
   test('updateProps merges props and notifies subscribers', ({ assert }) => {
     const stack = new ModalStack()
     let notified = 0

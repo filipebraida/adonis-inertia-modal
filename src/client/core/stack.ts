@@ -94,8 +94,18 @@ export class ModalStack {
     ;[...this.#entries].reverse().forEach((entry) => this.close(entry.id))
   }
 
+  /**
+   * Clear the whole stack (e.g. on a real navigation). Fires `onAfterLeave` for
+   * teardown, but deliberately NOT `onClose`: a deep-linked modal's `onClose`
+   * navigates to its redirect URL, which would loop with the navigation that
+   * triggered the reset.
+   */
   reset(): void {
+    const entries = this.#entries
     this.#entries = []
+    for (const entry of entries) {
+      entry.onAfterLeave?.()
+    }
     this.#notify()
   }
 
