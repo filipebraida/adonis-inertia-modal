@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
-### Unreleased (since alpha.4)
+### alpha.5
 
 - Panel presentation config is now applied: `maxWidth` (token → `im-max-w-*`
   class, with a Tailwind-aligned scale in `styles.css`) and `paddingClasses` /
