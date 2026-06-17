@@ -32,6 +32,16 @@ test.group('core | Config', () => {
     assert.equal(config.get('navigate'), false)
     assert.equal(config.get('modal.closeButton'), true)
   })
+
+  test('successive object puts accumulate (omitted keys preserved)', ({ assert }) => {
+    const config = new Config()
+    config.put({ navigate: true } as any)
+    config.put({ modal: { closeButton: false } } as any)
+
+    assert.equal(config.get('navigate'), true) // preserved from the first put
+    assert.equal(config.get('modal.closeButton'), false)
+    assert.equal(config.get('modal.maxWidth'), '2xl') // untouched default
+  })
 })
 
 test.group('core | lockBodyScroll', (group) => {

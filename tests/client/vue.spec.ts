@@ -17,6 +17,7 @@ import { Deferred } from '../../src/client/vue/deferred.ts'
 import { HeadlessModal } from '../../src/client/vue/headless_modal.ts'
 import { useModalStack } from '../../src/client/vue/context.ts'
 import useModal from '../../src/client/vue/use_modal.ts'
+import { putConfig, resetConfig } from '../../src/client/core/config.ts'
 import type { HttpClientLike } from '../../src/client/core/open.ts'
 import type { PageInfo } from '../../src/client/vue/types.ts'
 
@@ -588,6 +589,22 @@ test.group('vue | prefetch & close behaviors', (group) => {
 
     assert.notInclude(wrapper.text(), 'User: L')
     assert.deepEqual(events, ['close', 'afterLeave'])
+  })
+
+  test('global putConfig hides the close button for that modal type', async ({ assert }) => {
+    putConfig('modal.closeButton', false)
+    try {
+      const { wrapper } = mountApp({
+        client: clientReturning({ component: 'users/show', props: { name: 'X' }, key: 'k1' }),
+        ui: () => h(ModalLink, { href: '/m' }, { default: () => 'Open' }),
+      })
+      await clickText(wrapper, 'Open')
+      await tick()
+      assert.include(wrapper.text(), 'User: X')
+      assert.isNull(document.querySelector('.im-close-button'))
+    } finally {
+      resetConfig()
+    }
   })
 
   test('prefetch on mount serves the open from cache (single request)', async ({ assert }) => {

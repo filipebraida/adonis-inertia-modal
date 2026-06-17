@@ -58,4 +58,30 @@ test.group('resolveModalProps | partial reload', () => {
     assert.notProperty(resolved.props, 'audit')
     assert.deepEqual(resolved.deferred, {})
   })
+
+  test('an except reload includes regular props but keeps lazy props lazy', async ({ assert }) => {
+    let statsComputed = false
+    let auditComputed = false
+    const resolved = await resolveModalProps(
+      {
+        user: { id: 1 },
+        title: 'Hello',
+        stats: inertia.defer(() => {
+          statsComputed = true
+          return { visits: 10 }
+        }),
+        audit: inertia.optional(() => {
+          auditComputed = true
+          return ['entry']
+        }),
+      },
+      { partial: true, except: ['title'] }
+    )
+
+    // Regular, non-excepted props are included; the excepted one is dropped.
+    assert.deepEqual(resolved.props, { user: { id: 1 } })
+    // Lazy props are NOT evaluated under `except` (only `only` requests them).
+    assert.isFalse(statsComputed)
+    assert.isFalse(auditComputed)
+  })
 })

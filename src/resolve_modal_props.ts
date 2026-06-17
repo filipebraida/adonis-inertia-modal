@@ -78,6 +78,11 @@ export async function resolveModalProps(
     return true
   }
 
+  // Lazy props (deferred/optional) are only evaluated when explicitly requested
+  // via `only` — never on a standard visit or an `except` reload (which would
+  // defeat their laziness, diverging from the Inertia adapter).
+  const isLazyRequested = (key: string): boolean => !!only && only.includes(key)
+
   for (const [key, value] of Object.entries(input)) {
     if (isObject(value)) {
       /**
@@ -97,7 +102,9 @@ export async function resolveModalProps(
 
       if (DEFERRED_PROP in value) {
         if (partial) {
-          pending.push({ key, value: value.compute })
+          if (isLazyRequested(key)) {
+            pending.push({ key, value: value.compute })
+          }
         } else {
           const group = value.group ?? 'default'
           deferred[group] = deferred[group] ?? []
@@ -107,8 +114,8 @@ export async function resolveModalProps(
       }
 
       if (OPTIONAL_PROP in value) {
-        // Only loaded on demand (partial reload).
-        if (partial) {
+        // Only loaded on demand, when explicitly requested via `only`.
+        if (partial && isLazyRequested(key)) {
           pending.push({ key, value: value.compute })
         }
         continue
@@ -124,7 +131,9 @@ export async function resolveModalProps(
         const inner = value.value
         if (isObject(inner) && DEFERRED_PROP in inner) {
           if (partial) {
-            pending.push({ key, value: inner.compute })
+            if (isLazyRequested(key)) {
+              pending.push({ key, value: inner.compute })
+            }
           } else {
             const group = inner.group ?? 'default'
             deferred[group] = deferred[group] ?? []

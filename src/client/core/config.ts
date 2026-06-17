@@ -57,13 +57,13 @@ export class Config {
 
   put(key: string | Partial<ModalConfig>, value?: unknown): void {
     if (typeof key === 'object') {
+      // Merge onto the CURRENT config (not defaults) so successive puts
+      // accumulate and omitted keys are preserved.
       this.#config = {
-        type: key.type ?? defaultConfig.type,
-        navigate: key.navigate ?? defaultConfig.navigate,
-        useNativeDialog: key.useNativeDialog ?? defaultConfig.useNativeDialog,
-        appElement: key.appElement !== undefined ? key.appElement : defaultConfig.appElement,
-        modal: { ...defaultConfig.modal, ...key.modal },
-        slideover: { ...defaultConfig.slideover, ...key.slideover },
+        ...this.#config,
+        ...key,
+        modal: { ...this.#config.modal, ...key.modal },
+        slideover: { ...this.#config.slideover, ...key.slideover },
       }
       return
     }

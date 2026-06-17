@@ -9,6 +9,7 @@ import { Deferred } from '../../src/client/react/deferred.tsx'
 import { HeadlessModal } from '../../src/client/react/headless_modal.tsx'
 import { useModalStack } from '../../src/client/react/context.ts'
 import useModal from '../../src/client/react/use_modal.ts'
+import { putConfig, resetConfig } from '../../src/client/core/config.ts'
 import type { HttpClientLike } from '../../src/client/core/open.ts'
 import type { PageInfo } from '../../src/client/react/types.ts'
 
@@ -584,6 +585,21 @@ test.group('react | close behaviors', (group) => {
     fireEvent.click(screen.getByText('Open'))
     await screen.findByText('body')
     assert.isNull(container.querySelector('.im-close-button'))
+  })
+
+  test('global putConfig hides the close button for that modal type', async ({ assert }) => {
+    putConfig('modal.closeButton', false)
+    try {
+      const { container } = renderApp({
+        client: clientReturning({ component: 'users/show', props: { name: 'X' }, key: 'k1' }),
+        ui: <ModalLink href="/m">Open</ModalLink>,
+      })
+      fireEvent.click(screen.getByText('Open'))
+      await screen.findByText('User: X')
+      assert.isNull(container.querySelector('.im-close-button'))
+    } finally {
+      resetConfig()
+    }
   })
 
   test('clicking the backdrop closes the modal by default', async ({ assert }) => {

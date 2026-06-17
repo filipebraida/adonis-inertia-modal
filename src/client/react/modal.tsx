@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react'
 
+import { getConfigByType } from '../core/config.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
@@ -117,6 +118,12 @@ function ModalShell({
   useEffect(() => lockBodyScroll(), [])
 
   const isSlideover = modal.config.slideover === true
+  // Shown unless turned off by the prop, the per-modal config, or the global
+  // config (putConfig) for this modal type.
+  const showCloseButton =
+    closeButton !== false &&
+    modal.config.closeButton !== false &&
+    getConfigByType(isSlideover, 'closeButton') !== false
   const position = typeof modal.config.position === 'string' ? modal.config.position : undefined
   const dialogClass = [
     'im-dialog',
@@ -148,7 +155,7 @@ function ModalShell({
       }}
     >
       <div className="im-panel" onClick={(event) => event.stopPropagation()}>
-        {closeButton && (
+        {showCloseButton && (
           <button
             type="button"
             className="im-close-button"

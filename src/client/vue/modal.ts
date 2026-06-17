@@ -4,6 +4,7 @@
 
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { getConfigByType } from '../core/config.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
@@ -155,6 +156,12 @@ export const Modal = defineComponent({
 
       const closeExplicitly = m.config.closeExplicitly === true
       const closeOnClickOutside = m.config.closeOnClickOutside !== false
+      // Shown unless turned off by the prop, the per-modal config, or the global
+      // config (putConfig) for this modal type.
+      const showCloseButton =
+        props.closeButton !== false &&
+        m.config.closeButton !== false &&
+        getConfigByType(isSlideover, 'closeButton') !== false
 
       return h(
         'dialog',
@@ -178,7 +185,7 @@ export const Modal = defineComponent({
         },
         [
           h('div', { class: 'im-panel', onClick: (event: MouseEvent) => event.stopPropagation() }, [
-            props.closeButton
+            showCloseButton
               ? h(
                   'button',
                   {
