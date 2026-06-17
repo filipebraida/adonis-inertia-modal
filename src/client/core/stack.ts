@@ -50,6 +50,7 @@ export class ModalStack {
       baseUrl: payload.baseUrl,
       redirectUrl: payload.redirectUrl,
       config: options.config ?? {},
+      local: options.local ?? false,
       isOpen: true,
       index: this.#entries.length,
       onTopOfStack: true,

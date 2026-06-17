@@ -5,6 +5,7 @@ import { ModalStackProvider } from '../../src/client/react/ModalStackProvider.ts
 import { ModalRoot } from '../../src/client/react/ModalRoot.tsx'
 import { ModalLink } from '../../src/client/react/ModalLink.tsx'
 import { Modal } from '../../src/client/react/Modal.tsx'
+import { useModalStack } from '../../src/client/react/context.ts'
 import useModal from '../../src/client/react/use_modal.ts'
 import type { HttpClientLike } from '../../src/client/core/open.ts'
 import type { PageInfo } from '../../src/client/react/types.ts'
@@ -263,5 +264,52 @@ test.group('react | nested, slideover & event bus', (group) => {
     fireEvent.click(await screen.findByText('do-save'))
 
     assert.equal(received, 'hi')
+  })
+})
+
+test.group('react | local modals', (group) => {
+  group.each.teardown(() => cleanup())
+
+  test('opens a local modal with props, without a server request', async ({ assert }) => {
+    let requested = false
+    const client: HttpClientLike = {
+      request: () => {
+        requested = true
+        return Promise.resolve({ data: { props: {} } })
+      },
+    }
+
+    function LocalPage() {
+      const { visitModal } = useModalStack()
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() => visitModal('#confirm', { props: { message: 'Sure?' } })}
+          >
+            open-local
+          </button>
+          <Modal name="confirm">
+            {({ props, close }) => (
+              <div>
+                <span>msg: {String(props.message)}</span>
+                <button type="button" onClick={close}>
+                  x
+                </button>
+              </div>
+            )}
+          </Modal>
+        </div>
+      )
+    }
+
+    renderApp({ client, ui: <LocalPage /> })
+
+    fireEvent.click(screen.getByText('open-local'))
+    assert.isNotNull(await screen.findByText('msg: Sure?'))
+    assert.isFalse(requested)
+
+    fireEvent.click(screen.getByText('x'))
+    await waitFor(() => assert.isNull(screen.queryByText('msg: Sure?')))
   })
 })

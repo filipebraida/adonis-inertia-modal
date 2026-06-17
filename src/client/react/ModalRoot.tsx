@@ -14,9 +14,10 @@ export function ModalRoot() {
 
   return (
     <>
-      {stack.map((entry, index) => (
-        <ModalRenderer key={entry.id} index={index} />
-      ))}
+      {stack.map((entry, index) =>
+        // Local modals render their own inline content via <Modal name>.
+        entry.local ? null : <ModalRenderer key={entry.id} index={index} />
+      )}
     </>
   )
 }

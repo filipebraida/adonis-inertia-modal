@@ -15,7 +15,7 @@ import { router as inertiaRouter, usePage as inertiaUsePage } from '@inertiajs/r
 
 import { createFetchClient } from '../core/fetch_client.ts'
 import { requestModal, type HttpClientLike } from '../core/open.ts'
-import { ModalStack } from '../core/stack.ts'
+import { generateId, ModalStack } from '../core/stack.ts'
 import type { ModalEntry, ModalResponsePayload } from '../core/types.ts'
 import { ModalStackContext, type ModalStackContextValue } from './context.ts'
 import type { PageInfo, ReloadOptions, VisitOptions } from './types.ts'
@@ -77,6 +77,30 @@ export function ModalStackProvider({
 
   const visit = useCallback(
     async (href: string, options: VisitOptions = {}): Promise<ModalEntry> => {
+      /**
+       * Local modal: `href` like `#confirm`. No server request; the content is
+       * defined inline via <Modal name="confirm">.
+       */
+      if (href.startsWith('#')) {
+        const entry = stackInstance.push(
+          { component: '', props: options.props ?? {}, key: generateId() },
+          {
+            name: href.slice(1),
+            local: true,
+            config: options.config,
+            onClose: options.onClose,
+            onAfterLeave: options.onAfterLeave,
+          }
+        )
+        if (options.listeners) {
+          for (const [event, callback] of Object.entries(options.listeners)) {
+            entry.emitter.on(event, callback)
+          }
+        }
+        options.onSuccess?.()
+        return entry
+      }
+
       options.onStart?.()
       try {
         const current = pageRef.current

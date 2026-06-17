@@ -25,6 +25,8 @@ export interface VisitOptions {
   onClose?: () => void
   onAfterLeave?: () => void
   listeners?: Record<string, (...args: unknown[]) => void>
+  /** Props for a local modal (href starting with `#`). */
+  props?: Record<string, unknown>
 }
 
 export interface ReloadOptions {

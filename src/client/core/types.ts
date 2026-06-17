@@ -37,6 +37,8 @@ export interface ModalEntry {
   baseUrl?: string
   redirectUrl?: string
   config: ModalOptions
+  /** A local (client-only) modal whose content is defined inline via <Modal name>. */
+  local: boolean
   isOpen: boolean
   index: number
   onTopOfStack: boolean
@@ -48,6 +50,7 @@ export interface ModalEntry {
 export interface PushOptions {
   name?: string
   url?: string
+  local?: boolean
   config?: ModalOptions
   onClose?: () => void
   onAfterLeave?: () => void
