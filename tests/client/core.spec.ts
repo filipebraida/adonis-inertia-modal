@@ -4,6 +4,7 @@ import { Config } from '../../src/client/core/config.ts'
 import { EventEmitter } from '../../src/client/core/event_emitter.ts'
 import { ModalStack } from '../../src/client/core/stack.ts'
 import { buildModalRequest, parseModalPayload } from '../../src/client/core/request.ts'
+import { lockBodyScroll } from '../../src/client/core/scroll_lock.ts'
 
 test.group('core | Config', () => {
   test('returns defaults and supports dot-path get/put', ({ assert }) => {
@@ -28,6 +29,35 @@ test.group('core | Config', () => {
     config.reset()
     assert.equal(config.get('navigate'), false)
     assert.equal(config.get('modal.closeButton'), true)
+  })
+})
+
+test.group('core | lockBodyScroll', (group) => {
+  group.each.teardown(() => {
+    document.body.style.overflow = ''
+  })
+
+  test('restores the original overflow only after the last (stacked) lock releases', ({
+    assert,
+  }) => {
+    document.body.style.overflow = 'auto'
+
+    const unlockA = lockBodyScroll()
+    assert.equal(document.body.style.overflow, 'hidden')
+
+    const unlockB = lockBodyScroll()
+    assert.equal(document.body.style.overflow, 'hidden')
+
+    // Release out of order (the lower modal first): still locked while A holds.
+    unlockB()
+    assert.equal(document.body.style.overflow, 'hidden')
+
+    unlockA()
+    assert.equal(document.body.style.overflow, 'auto') // original restored
+
+    // Unlock is idempotent and must not corrupt the count.
+    unlockA()
+    assert.equal(document.body.style.overflow, 'auto')
   })
 })
 

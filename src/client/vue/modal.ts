@@ -4,6 +4,7 @@
 
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { useResolvedModal } from './use_modal.ts'
 
 /**
@@ -31,7 +32,7 @@ export const Modal = defineComponent({
     const dialog = ref<HTMLDialogElement | null>(null)
 
     let closed = false
-    let prevOverflow = ''
+    let unlockScroll: (() => void) | null = null
     let keydownHandler: ((event: KeyboardEvent) => void) | null = null
 
     const handleClose = () => {
@@ -90,17 +91,16 @@ export const Modal = defineComponent({
       { immediate: true }
     )
 
-    // Lock body scroll while open; restore on unmount.
+    // Lock body scroll while open; ref-counted so stacked modals restore the
+    // original value only once the last one closes.
     onMounted(() => {
-      if (typeof document === 'undefined') return
-      prevOverflow = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
+      unlockScroll = lockBodyScroll()
     })
 
     onBeforeUnmount(() => {
-      if (typeof document !== 'undefined') {
-        document.body.style.overflow = prevOverflow
-        if (keydownHandler) document.removeEventListener('keydown', keydownHandler)
+      unlockScroll?.()
+      if (typeof document !== 'undefined' && keydownHandler) {
+        document.removeEventListener('keydown', keydownHandler)
       }
     })
 

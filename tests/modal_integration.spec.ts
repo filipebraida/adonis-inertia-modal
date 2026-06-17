@@ -37,6 +37,7 @@ class AuthorTransformer extends BaseTransformer<{
  */
 test.group('ModalResponse | integration', (group) => {
   let app: Awaited<ReturnType<typeof setupApp>>['app']
+  let backdropDispatches = 0
 
   group.setup(async () => {
     ;({ app } = await setupApp())
@@ -45,6 +46,12 @@ test.group('ModalResponse | integration', (group) => {
     router
       .get('/users', async (ctx: any) => ctx.inertia.render('users/index', { users: ['a', 'b'] }))
       .as('users.index')
+    router
+      .get('/counter', async (ctx: any) => {
+        backdropDispatches += 1
+        return ctx.inertia.render('counter/index', {})
+      })
+      .as('counter.index')
     router.commit()
   })
 
@@ -99,6 +106,38 @@ test.group('ModalResponse | integration', (group) => {
     assert.notProperty(page.props, 'users')
     assert.equal(page.props.modal.component, 'users/show')
     assert.equal(ctx.response.getHeader('x-inertia-modal'), 'true')
+  })
+
+  test('restores the routing state on the context after dispatching the backdrop', async ({
+    assert,
+  }) => {
+    const { ctx, inertia } = await modalContext({ [InertiaHeaders.Inertia]: 'true' }, '/users/1')
+
+    // The factory-built context is not bound to a route initially.
+    assert.isUndefined(ctx.route)
+
+    await inertia
+      .modal('users/show', { user: { id: 1 } })
+      .baseRoute('users.index')
+      .refreshBackdrop()
+
+    // After re-dispatching the backdrop, the modal route's (empty) state is back.
+    assert.isUndefined(ctx.route)
+    assert.isUndefined(ctx.routeKey)
+  })
+
+  test('awaiting the builder twice dispatches the backdrop only once (memoized render)', async ({
+    assert,
+  }) => {
+    backdropDispatches = 0
+    const { inertia } = await modalContext({ [InertiaHeaders.Inertia]: 'true' }, '/counter/1')
+
+    const builder = inertia.modal('counter/show', {}).baseRoute('counter.index').refreshBackdrop()
+    const first = await builder
+    const second = await builder
+
+    assert.equal(backdropDispatches, 1)
+    assert.strictEqual(first, second)
   })
 
   test('refreshBackdrop re-dispatches the base route even on an Inertia request', async ({

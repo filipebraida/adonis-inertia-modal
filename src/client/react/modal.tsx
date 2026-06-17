@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react'
 
+import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { useResolvedModal, type UseModalReturn } from './use_modal.ts'
 
 export interface ModalProps {
@@ -79,17 +80,9 @@ function ModalShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal.onTopOfStack, closeExplicitly])
 
-  // Lock body scroll while open; restore on unmount.
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return
-    }
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
+  // Lock body scroll while open; ref-counted so stacked modals restore the
+  // original value only once the last one closes.
+  useEffect(() => lockBodyScroll(), [])
 
   const isSlideover = modal.config.slideover === true
   const position = typeof modal.config.position === 'string' ? modal.config.position : undefined

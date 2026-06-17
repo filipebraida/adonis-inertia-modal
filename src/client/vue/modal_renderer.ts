@@ -27,7 +27,11 @@ export const ModalRenderer = defineComponent({
       (name) => {
         if (!name) return
         ctx.resolve(name).then((resolved) => {
-          component.value = resolved
+          // Ignore a stale resolution if the entry's component changed while the
+          // resolver was in flight (e.g. the slot at this index was replaced).
+          if (ctx.stack.value[props.index]?.component === name) {
+            component.value = resolved
+          }
         })
       },
       { immediate: true }

@@ -37,7 +37,7 @@ First usable release. React and Vue 3 support.
 
 ### Vue client (`adonis-inertia-modal/vue`)
 
-- Vue 3 plugin (`app.use(modal, { resolve })`) sharing the framework-agnostic
+- Vue 3 plugin (`app.use(modal, { resolveComponent })`) sharing the framework-agnostic
   core with React; same component surface: `ModalRoot`, `ModalLink`, `Modal`,
   `useModal`, `useModalStack` (`visit`/`visitModal`), `Deferred`, `WhenVisible`,
   `HeadlessModal`, and `putConfig`/`getConfig`/`resetConfig`.

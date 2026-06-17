@@ -69,6 +69,7 @@ export class ModalResponse {
   #baseUrl?: string
   #refreshBackdrop = false
   #forceBase = false
+  #renderPromise?: Promise<unknown>
 
   constructor(
     private inertia: InertiaLike,
@@ -138,8 +139,17 @@ export class ModalResponse {
 
   /**
    * Resolve the response: a PageObject (Inertia request) or HTML (initial load).
+   * Memoized so awaiting the builder more than once does not re-run the pipeline
+   * (which would re-dispatch the backdrop, mint a new key and re-set headers).
    */
-  async render(): Promise<unknown> {
+  render(): Promise<unknown> {
+    if (!this.#renderPromise) {
+      this.#renderPromise = this.#render()
+    }
+    return this.#renderPromise
+  }
+
+  async #render(): Promise<unknown> {
     const request = this.ctx.request
     const isInertia = !!request.header(InertiaHeaders.Inertia)
     const partialComponent = request.header(InertiaHeaders.PartialComponent)
@@ -197,16 +207,34 @@ export class ModalResponse {
      * (used for the page URL) still reflects the modal URL — keeping the
      * browser on the deep-linkable modal address.
      */
+    const previous = {
+      params: ctx.params,
+      subdomains: ctx.subdomains,
+      route: ctx.route,
+      routeKey: ctx.routeKey,
+    }
     ctx.params = matched.params
     ctx.subdomains = matched.subdomains
     ctx.route = matched.route
     ctx.routeKey = matched.routeKey
 
-    const handler = matched.route.handler
-    if (typeof handler === 'function') {
-      return handler(ctx)
+    /**
+     * Restore the original routing state once the backdrop handler has produced
+     * its response, so anything that runs after (exception handling, logging,
+     * post-handler middleware) still sees the modal route the request hit.
+     */
+    try {
+      const handler = matched.route.handler
+      if (typeof handler === 'function') {
+        return await handler(ctx)
+      }
+      return await handler.handle(ctx.containerResolver, ctx)
+    } finally {
+      ctx.params = previous.params
+      ctx.subdomains = previous.subdomains
+      ctx.route = previous.route
+      ctx.routeKey = previous.routeKey
     }
-    return handler.handle(ctx.containerResolver, ctx)
   }
 
   /**
