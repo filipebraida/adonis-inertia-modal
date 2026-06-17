@@ -40,6 +40,7 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
 
   // Mark closing (fires onClose); the modal's leave transition drives remove().
   const close = (id: string) => instance.close(id)
+  const closeAll = () => instance.closeAll()
   const remove = (id: string) => instance.remove(id)
 
   const prefetch = async (href: string, opts: PrefetchOptions = {}) => {
@@ -176,6 +177,7 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
     visit,
     visitModal: visit,
     close,
+    closeAll,
     remove,
     reload,
     prefetch,

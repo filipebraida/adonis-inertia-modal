@@ -684,3 +684,74 @@ test.group('react | close behaviors', (group) => {
     await waitFor(() => assert.isNull(screen.queryByText('open-b'))) // parent closed
   })
 })
+
+test.group('react | presentation & helpers', (group) => {
+  group.each.teardown(() => cleanup())
+
+  test('applies the maxWidth token and panelClasses from ModalLink config', async ({ assert }) => {
+    const { container } = renderApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'P' }, key: 'k1' }),
+      ui: (
+        <ModalLink href="/m" config={{ maxWidth: 'lg', panelClasses: 'custom-panel' }}>
+          Open
+        </ModalLink>
+      ),
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('User: P')
+    const panel = container.querySelector('.im-panel')!
+    assert.isTrue(panel.classList.contains('im-max-w-lg'))
+    assert.isTrue(panel.classList.contains('custom-panel'))
+  })
+
+  test('closeAll() closes every open modal in the stack', async ({ assert }) => {
+    function ModalA() {
+      const { closeAll } = useModalStack()
+      return (
+        <Modal>
+          <span>Modal A</span>
+          <ModalLink href="/b">open-b</ModalLink>
+          <button type="button" onClick={closeAll}>
+            close-all
+          </button>
+        </Modal>
+      )
+    }
+    function ModalB() {
+      return (
+        <Modal>
+          <span>Modal B</span>
+        </Modal>
+      )
+    }
+    const client: HttpClientLike = {
+      request: ({ url }) =>
+        Promise.resolve({
+          data: {
+            props: {
+              modal: url.includes('/b')
+                ? { component: 'mod/b', props: {}, key: 'kb' }
+                : { component: 'mod/a', props: {}, key: 'ka' },
+            },
+          },
+        }),
+    }
+
+    renderApp({
+      client,
+      resolve: async (name) => (name === 'mod/b' ? ModalB : ModalA),
+      ui: <ModalLink href="/a">open-a</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('open-a'))
+    fireEvent.click(await screen.findByText('open-b'))
+    await screen.findByText('Modal B')
+
+    fireEvent.click(screen.getByText('close-all'))
+    await waitFor(() => {
+      assert.isNull(screen.queryByText('Modal A'))
+      assert.isNull(screen.queryByText('Modal B'))
+    })
+  })
+})

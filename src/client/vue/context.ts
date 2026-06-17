@@ -17,6 +17,8 @@ export interface ModalContext {
   visitModal: (href: string, options?: VisitOptions) => Promise<ModalEntry>
   /** Mark a modal as closing (isOpen=false, fires onClose). Removal is deferred. */
   close: (id: string) => void
+  /** Close every open modal (top-most first). */
+  closeAll: () => void
   /** Remove a closed modal (fires onAfterLeave). Called by the UI after its leave transition. */
   remove: (id: string) => void
   reload: (id: string, options?: ReloadOptions) => Promise<void>

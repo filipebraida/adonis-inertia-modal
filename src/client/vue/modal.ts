@@ -5,6 +5,7 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { getConfigByType } from '../core/config.ts'
+import { resolvePanelClasses } from '../core/presentation.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
@@ -184,21 +185,28 @@ export const Modal = defineComponent({
           },
         },
         [
-          h('div', { class: 'im-panel', onClick: (event: MouseEvent) => event.stopPropagation() }, [
-            showCloseButton
-              ? h(
-                  'button',
-                  {
-                    'type': 'button',
-                    'class': 'im-close-button',
-                    'aria-label': 'Close',
-                    'onClick': handleClose,
-                  },
-                  '×'
-                )
-              : null,
-            slots.default?.(m),
-          ]),
+          h(
+            'div',
+            {
+              class: resolvePanelClasses(m.config, isSlideover),
+              onClick: (event: MouseEvent) => event.stopPropagation(),
+            },
+            [
+              showCloseButton
+                ? h(
+                    'button',
+                    {
+                      'type': 'button',
+                      'class': 'im-close-button',
+                      'aria-label': 'Close',
+                      'onClick': handleClose,
+                    },
+                    '×'
+                  )
+                : null,
+              slots.default?.(m),
+            ]
+          ),
         ]
       )
     }

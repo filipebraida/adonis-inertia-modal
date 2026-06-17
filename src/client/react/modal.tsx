@@ -5,6 +5,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 import { getConfigByType } from '../core/config.ts'
+import { resolvePanelClasses } from '../core/presentation.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
@@ -154,7 +155,10 @@ function ModalShell({
         }
       }}
     >
-      <div className="im-panel" onClick={(event) => event.stopPropagation()}>
+      <div
+        className={resolvePanelClasses(modal.config, isSlideover)}
+        onClick={(event) => event.stopPropagation()}
+      >
         {showCloseButton && (
           <button
             type="button"

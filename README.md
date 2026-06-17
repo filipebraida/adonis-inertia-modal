@@ -273,13 +273,18 @@ import { Deferred, WhenVisible } from 'adonis-inertia-modal/react'
 ```tsx
 import { useModalStack, Modal } from 'adonis-inertia-modal/react'
 
-const { visitModal } = useModalStack()
+const { visitModal, closeAll } = useModalStack()
 visitModal('/users/create', { slideover: true })
+closeAll() // close every open modal (top-most first)
 
 // Local (client-only) modal — no server request:
 visitModal('#confirm', { props: { message: 'Sure?' } })
 <Modal name="confirm">{({ props, close }) => <p>{props.message}</p>}</Modal>
 ```
+
+Per-modal presentation comes from `config` (on `<ModalLink>`) or `putConfig`:
+`maxWidth` (`sm`…`7xl`/`full`) maps to an `im-max-w-*` class; `panelClasses` /
+`paddingClasses` are appended to the panel so you can add your own.
 
 ### Headless mode
 

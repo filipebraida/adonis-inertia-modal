@@ -77,6 +77,7 @@ export function ModalStackProvider({
 
   // Mark closing (fires onClose); the modal's leave transition drives remove().
   const close = useCallback((id: string) => stackInstance.close(id), [stackInstance])
+  const closeAll = useCallback(() => stackInstance.closeAll(), [stackInstance])
   const remove = useCallback((id: string) => stackInstance.remove(id), [stackInstance])
 
   /**
@@ -268,6 +269,7 @@ export function ModalStackProvider({
     visit,
     visitModal: visit,
     close,
+    closeAll,
     remove,
     reload,
     prefetch,

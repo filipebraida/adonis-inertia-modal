@@ -670,3 +670,78 @@ test.group('vue | prefetch & close behaviors', (group) => {
     assert.notInclude(wrapper.text(), 'User: B')
   })
 })
+
+test.group('vue | presentation & helpers', (group) => {
+  group.each.teardown(() => {
+    wrappers.splice(0).forEach((w) => w.unmount())
+  })
+
+  test('applies the maxWidth token and panelClasses from ModalLink config', async ({ assert }) => {
+    const { wrapper } = mountApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'P' }, key: 'k1' }),
+      ui: () =>
+        h(
+          ModalLink,
+          { href: '/m', config: { maxWidth: 'lg', panelClasses: 'custom-panel' } },
+          { default: () => 'Open' }
+        ),
+    })
+
+    await clickText(wrapper, 'Open')
+    await tick()
+    const panel = document.querySelector('.im-panel')!
+    assert.isTrue(panel.classList.contains('im-max-w-lg'))
+    assert.isTrue(panel.classList.contains('custom-panel'))
+  })
+
+  test('closeAll() closes every open modal in the stack', async ({ assert }) => {
+    const ModalA = defineComponent({
+      setup() {
+        const { closeAll } = useModalStack()
+        return () =>
+          h(Modal, null, {
+            default: () =>
+              h('div', [
+                h('span', 'Modal A'),
+                h(ModalLink, { href: '/b' }, { default: () => 'open-b' }),
+                h('button', { type: 'button', onClick: closeAll }, 'close-all'),
+              ]),
+          })
+      },
+    })
+    const ModalB = defineComponent({
+      setup() {
+        return () => h(Modal, null, { default: () => h('span', 'Modal B') })
+      },
+    })
+    const client: HttpClientLike = {
+      request: ({ url }) =>
+        Promise.resolve({
+          data: {
+            props: {
+              modal: url.includes('/b')
+                ? { component: 'mod/b', props: {}, key: 'kb' }
+                : { component: 'mod/a', props: {}, key: 'ka' },
+            },
+          },
+        }),
+    }
+
+    const { wrapper } = mountApp({
+      client,
+      resolve: async (name) => (name === 'mod/b' ? ModalB : ModalA),
+      ui: () => h(ModalLink, { href: '/a' }, { default: () => 'open-a' }),
+    })
+
+    await clickText(wrapper, 'open-a')
+    await tick()
+    await clickText(wrapper, 'open-b')
+    await tick()
+    assert.include(wrapper.text(), 'Modal B')
+
+    await clickText(wrapper, 'close-all')
+    await tick()
+    assert.notInclude(wrapper.text(), 'Modal A')
+    assert.notInclude(wrapper.text(), 'Modal B')
+  })
+})

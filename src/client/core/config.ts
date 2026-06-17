@@ -16,9 +16,8 @@ export interface ModalTypeConfig {
 
 export interface ModalConfig {
   type: 'modal' | 'slideover'
+  /** Reserved for a future "navigate" mode (open as a full page instead of a modal). */
   navigate: boolean
-  useNativeDialog: boolean
-  appElement: string | null
   modal: ModalTypeConfig
   slideover: ModalTypeConfig
 }
@@ -26,15 +25,13 @@ export interface ModalConfig {
 export const defaultConfig: ModalConfig = {
   type: 'modal',
   navigate: false,
-  useNativeDialog: true,
-  appElement: '#app',
   modal: {
     closeButton: true,
     closeExplicitly: false,
     closeOnClickOutside: true,
     maxWidth: '2xl',
-    paddingClasses: 'p-4 sm:p-6',
-    panelClasses: 'bg-white rounded',
+    paddingClasses: '',
+    panelClasses: '',
     position: 'center',
   },
   slideover: {
@@ -42,8 +39,8 @@ export const defaultConfig: ModalConfig = {
     closeExplicitly: false,
     closeOnClickOutside: true,
     maxWidth: 'md',
-    paddingClasses: 'p-4 sm:p-6',
-    panelClasses: 'bg-white min-h-screen',
+    paddingClasses: '',
+    panelClasses: '',
     position: 'right',
   },
 }

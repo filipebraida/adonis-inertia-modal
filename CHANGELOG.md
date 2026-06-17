@@ -7,6 +7,14 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
+### Unreleased (since alpha.4)
+
+- Panel presentation config is now applied: `maxWidth` (token → `im-max-w-*`
+  class, with a Tailwind-aligned scale in `styles.css`) and `paddingClasses` /
+  `panelClasses` (appended to the panel), from the per-modal `config` or global
+  `putConfig`. Dropped the dead `useNativeDialog` / `appElement` config fields.
+- `useModalStack().closeAll()` closes every open modal (top-most first).
+
 ### Server
 
 - `inertia.modal(component, props?)` builder with `baseRoute()`, `baseUrl()`,

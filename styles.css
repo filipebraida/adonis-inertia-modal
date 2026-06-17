@@ -41,8 +41,44 @@
   color: #111;
   border-radius: 0.5rem;
   padding: 1.5rem 1.75rem;
+  width: 100%;
   min-width: 340px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* maxWidth tokens (config.maxWidth → im-max-w-<token>), Tailwind-aligned scale. */
+.im-max-w-sm {
+  max-width: 24rem;
+}
+.im-max-w-md {
+  max-width: 28rem;
+}
+.im-max-w-lg {
+  max-width: 32rem;
+}
+.im-max-w-xl {
+  max-width: 36rem;
+}
+.im-max-w-2xl {
+  max-width: 42rem;
+}
+.im-max-w-3xl {
+  max-width: 48rem;
+}
+.im-max-w-4xl {
+  max-width: 56rem;
+}
+.im-max-w-5xl {
+  max-width: 64rem;
+}
+.im-max-w-6xl {
+  max-width: 72rem;
+}
+.im-max-w-7xl {
+  max-width: 80rem;
+}
+.im-max-w-full {
+  max-width: 100%;
 }
 .im-slideover .im-panel {
   height: 100vh;

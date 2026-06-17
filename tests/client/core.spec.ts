@@ -6,6 +6,7 @@ import { ModalStack } from '../../src/client/core/stack.ts'
 import { buildModalRequest, parseModalPayload } from '../../src/client/core/request.ts'
 import { lockBodyScroll } from '../../src/client/core/scroll_lock.ts'
 import { PrefetchCache } from '../../src/client/core/prefetch_cache.ts'
+import { resolvePanelClasses } from '../../src/client/core/presentation.ts'
 import type { ModalResponsePayload } from '../../src/client/core/types.ts'
 
 test.group('core | Config', () => {
@@ -70,6 +71,23 @@ test.group('core | lockBodyScroll', (group) => {
     // Unlock is idempotent and must not corrupt the count.
     unlockA()
     assert.equal(document.body.style.overflow, 'auto')
+  })
+})
+
+test.group('core | resolvePanelClasses', () => {
+  test('maps maxWidth to a token class and falls back to global config', ({ assert }) => {
+    // No per-modal config → global default (modal.maxWidth = '2xl').
+    assert.equal(resolvePanelClasses({}, false), 'im-panel im-max-w-2xl')
+    // Slideover uses the slideover default (md).
+    assert.equal(resolvePanelClasses({}, true), 'im-panel im-max-w-md')
+  })
+
+  test('per-modal config overrides and appends padding/panel classes', ({ assert }) => {
+    const classes = resolvePanelClasses(
+      { maxWidth: 'lg', paddingClasses: 'p-8', panelClasses: 'shadow-xl ring' },
+      false
+    )
+    assert.equal(classes, 'im-panel im-max-w-lg p-8 shadow-xl ring')
   })
 })
 
