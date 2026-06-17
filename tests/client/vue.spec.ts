@@ -694,6 +694,30 @@ test.group('vue | presentation & helpers', (group) => {
     assert.isTrue(panel.classList.contains('custom-panel'))
   })
 
+  test('navigate mode opens the route as a full page instead of a modal', async ({ assert }) => {
+    let navigatedTo: string | null = null
+    let requested = false
+    const client: HttpClientLike = {
+      request: () => {
+        requested = true
+        return Promise.resolve({ data: { props: {} } })
+      },
+    }
+
+    const { wrapper } = mountApp({
+      client,
+      navigate: (url) => (navigatedTo = url),
+      ui: () => h(ModalLink, { href: '/notes/new', navigate: true }, { default: () => 'New' }),
+    })
+
+    await clickText(wrapper, 'New')
+    await tick()
+
+    assert.equal(navigatedTo, '/notes/new')
+    assert.isFalse(requested)
+    assert.isNull(document.querySelector('dialog.im-dialog'))
+  })
+
   test('closeAll() closes every open modal in the stack', async ({ assert }) => {
     const ModalA = defineComponent({
       setup() {

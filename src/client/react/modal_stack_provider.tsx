@@ -298,6 +298,7 @@ export function ModalStackProvider({
     remove,
     reload,
     prefetch,
+    navigate: doNavigate,
     syncPage,
   }
 

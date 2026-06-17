@@ -4,6 +4,7 @@
 
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, type PropType } from 'vue'
 
+import { getConfig } from '../core/config.ts'
 import type { HttpMethod, ModalOptions } from '../core/types.ts'
 import { useModalStack } from './context.ts'
 import type { PrefetchMode, PrefetchOption } from './types.ts'
@@ -36,10 +37,12 @@ export const ModalLink = defineComponent({
     cacheFor: { type: Number, default: 30000 },
     /** Push a browser-history entry so the Back button closes this modal. */
     history: { type: Boolean, default: undefined },
+    /** Navigate to the route as a full page instead of opening a modal. */
+    navigate: { type: Boolean, default: undefined },
   },
   emits: ['start', 'success', 'error', 'close', 'afterLeave'],
   setup(props, { slots, emit, attrs }) {
-    const { visit, prefetch: prefetchModal } = useModalStack()
+    const { visit, prefetch: prefetchModal, navigate: doNavigate } = useModalStack()
     const loading = ref(false)
     let hoverTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -69,6 +72,14 @@ export const ModalLink = defineComponent({
     const handle = async (event?: MouseEvent) => {
       event?.preventDefault()
       if (loading.value) return
+
+      // `navigate` mode: open the route as a full page instead of a modal.
+      const navigateMode = props.navigate ?? (getConfig('navigate') as boolean | undefined) ?? false
+      if (navigateMode && !props.href.startsWith('#')) {
+        doNavigate(props.href)
+        return
+      }
+
       loading.value = true
 
       // Declared emits are consumed by Vue and not present in attrs; any

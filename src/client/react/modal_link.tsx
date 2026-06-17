@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from 'react'
 
+import { getConfig } from '../core/config.ts'
 import type { HttpMethod, ModalOptions } from '../core/types.ts'
 import { useModalStack } from './context.ts'
 import type { PrefetchMode, PrefetchOption } from './types.ts'
@@ -33,6 +34,8 @@ export interface ModalLinkProps {
   cacheFor?: number
   /** Push a browser-history entry so the Back button closes this modal. */
   history?: boolean
+  /** Navigate to the route as a full page instead of opening a modal (responsive opt-out). */
+  navigate?: boolean
   onStart?: () => void
   onSuccess?: () => void
   onError?: (error: unknown) => void
@@ -60,6 +63,7 @@ export function ModalLink({
   prefetch = false,
   cacheFor = 30000,
   history,
+  navigate,
   onStart,
   onSuccess,
   onError,
@@ -68,7 +72,7 @@ export function ModalLink({
   children,
   ...rest
 }: ModalLinkProps) {
-  const { visit, prefetch: prefetchModal } = useModalStack()
+  const { visit, prefetch: prefetchModal, navigate: doNavigate } = useModalStack()
   const [loading, setLoading] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -118,6 +122,12 @@ export function ModalLink({
       if (loading) {
         return
       }
+      // `navigate` mode: open the route as a full page instead of a modal.
+      const navigateMode = navigate ?? (getConfig('navigate') as boolean | undefined) ?? false
+      if (navigateMode && !href.startsWith('#')) {
+        doNavigate(href)
+        return
+      }
       setLoading(true)
       const callbacks = latest.current
       try {
@@ -140,7 +150,7 @@ export function ModalLink({
         setLoading(false)
       }
     },
-    [href, method, data, headers, config, slideover, history, loading, visit]
+    [href, method, data, headers, config, slideover, history, navigate, loading, visit, doNavigate]
   )
 
   const handleMouseEnter = useCallback(() => {

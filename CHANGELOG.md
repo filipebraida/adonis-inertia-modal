@@ -18,6 +18,8 @@ First usable release. React and Vue 3 support.
   pushes a history entry so the **Back button closes the modal** (and a UI close rolls
   the entry back), coordinating with Inertia's own popstate so the page isn't reloaded.
   Back-to-close only (no Forward re-open).
+- `navigate` mode: `<ModalLink navigate>` (or `putConfig('navigate', true)`) opens the
+  route as a full page instead of a modal — a responsive opt-out.
 
 ### Server
 

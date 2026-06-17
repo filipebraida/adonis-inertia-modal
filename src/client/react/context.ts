@@ -23,6 +23,8 @@ export interface ModalStackContextValue {
   reload: (id: string, options?: ReloadOptions) => Promise<void>
   /** Pre-fetch a modal into the cache so the next open is instant. */
   prefetch: (href: string, options?: PrefetchOptions) => Promise<void>
+  /** Navigate the browser (full Inertia visit) — used by `navigate` mode. */
+  navigate: (url: string) => void
   /** Feed the current Inertia page into the provider (called by ModalRoot). */
   syncPage: (page: PageInfo) => void
 }

@@ -705,6 +705,33 @@ test.group('react | presentation & helpers', (group) => {
     assert.isTrue(panel.classList.contains('custom-panel'))
   })
 
+  test('navigate mode opens the route as a full page instead of a modal', async ({ assert }) => {
+    let navigatedTo: string | null = null
+    let requested = false
+    const client: HttpClientLike = {
+      request: () => {
+        requested = true
+        return Promise.resolve({ data: { props: {} } })
+      },
+    }
+
+    renderApp({
+      client,
+      navigate: (url) => (navigatedTo = url),
+      ui: (
+        <ModalLink href="/notes/new" navigate>
+          New
+        </ModalLink>
+      ),
+    })
+
+    fireEvent.click(screen.getByText('New'))
+
+    assert.equal(navigatedTo, '/notes/new')
+    assert.isFalse(requested) // no modal request issued
+    assert.isNull(document.querySelector('dialog.im-dialog'))
+  })
+
   test('closeAll() closes every open modal in the stack', async ({ assert }) => {
     function ModalA() {
       const { closeAll } = useModalStack()
