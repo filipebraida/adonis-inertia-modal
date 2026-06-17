@@ -1,3 +1,3 @@
 import { configPkg } from '@adonisjs/eslint-config'
 
-export default configPkg()
+export default [{ ignores: ['build', 'coverage', 'playground'] }, ...configPkg()]

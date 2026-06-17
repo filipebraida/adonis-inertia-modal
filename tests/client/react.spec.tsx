@@ -98,6 +98,19 @@ test.group('react | ModalLink + ModalRoot', (group) => {
     fireEvent.click(screen.getByText('close-modal'))
     await waitFor(() => assert.isNull(screen.queryByText('User: Jane')))
   })
+
+  test('closes on Escape', async ({ assert }) => {
+    renderApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'Jane' }, key: 'k1' }),
+      ui: <ModalLink href="/users/1">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await screen.findByText('User: Jane')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => assert.isNull(screen.queryByText('User: Jane')))
+  })
 })
 
 test.group('react | deep-link (page props modal)', (group) => {
