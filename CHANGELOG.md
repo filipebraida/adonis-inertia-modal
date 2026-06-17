@@ -7,7 +7,9 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
-### Unreleased (since beta.1)
+### beta.2
+
+Closes the remaining inertiaui/modal feature-parity gaps.
 
 - `<Modal>` accepts presentation props so a page can declare its own appearance
   (`slideover`, `maxWidth`, `position`, `paddingClasses`, `panelClasses`,
