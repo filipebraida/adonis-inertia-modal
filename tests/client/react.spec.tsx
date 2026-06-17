@@ -5,6 +5,7 @@ import { ModalStackProvider } from '../../src/client/react/ModalStackProvider.ts
 import { ModalRoot } from '../../src/client/react/ModalRoot.tsx'
 import { ModalLink } from '../../src/client/react/ModalLink.tsx'
 import { Modal } from '../../src/client/react/Modal.tsx'
+import { Deferred } from '../../src/client/react/Deferred.tsx'
 import { useModalStack } from '../../src/client/react/context.ts'
 import useModal from '../../src/client/react/use_modal.ts'
 import type { HttpClientLike } from '../../src/client/core/open.ts'
@@ -323,5 +324,52 @@ test.group('react | local modals', (group) => {
 
     fireEvent.click(screen.getByText('x'))
     await waitFor(() => assert.isNull(screen.queryByText('msg: Sure?')))
+  })
+})
+
+test.group('react | deferred props', (group) => {
+  group.each.teardown(() => cleanup())
+
+  test('<Deferred> shows fallback, then loads the prop via a sparse reload', async ({ assert }) => {
+    function Stats() {
+      const modal = useModal()!
+      return <span>visits: {String((modal.props.stats as any)?.visits)}</span>
+    }
+    function WithDeferred() {
+      return (
+        <Modal>
+          <Deferred data="stats" fallback={<span>loading-stats</span>}>
+            <Stats />
+          </Deferred>
+        </Modal>
+      )
+    }
+
+    // The open returns the modal without `stats` (deferred); the reload that
+    // targets modal.props.stats returns it.
+    const client: HttpClientLike = {
+      request: ({ headers }) => {
+        const partial = headers['X-Inertia-Partial-Data'] ?? ''
+        const modal = partial.includes('modal.props.stats')
+          ? { component: 'm', props: { stats: { visits: 5 } }, key: 'k1' }
+          : {
+              component: 'm',
+              props: { user: { id: 1 } },
+              key: 'k1',
+              deferred: { default: ['stats'] },
+            }
+        return Promise.resolve({ data: { props: { modal } } })
+      },
+    }
+
+    renderApp({
+      component: WithDeferred,
+      client,
+      ui: <ModalLink href="/m">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    // The deferred prop is absent on open, then loaded via the sparse reload.
+    assert.isNotNull(await screen.findByText('visits: 5'))
   })
 })

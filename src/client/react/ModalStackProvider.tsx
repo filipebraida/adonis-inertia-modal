@@ -152,24 +152,24 @@ export function ModalStackProvider({
       options.onStart?.()
       try {
         const current = pageRef.current
-        // Re-fetch the whole modal, then merge the requested subset client-side.
-        // (Server-side filtering of nested modal.props — needed for lazy/deferred
-        // props — comes in a later phase.)
+        // Map requested modal prop names to `modal.props.*` so the server only
+        // computes those (needed for deferred/optional props). Without `only`,
+        // refetch the whole modal.
+        const only = options.only
+          ? ['modal', ...options.only.map((key) => `modal.props.${key}`)]
+          : ['modal']
+
         const payload = await requestModal(client, {
           href: entry.url,
           data: options.data,
           headers: options.headers,
           currentComponent: current.component,
           version: current.version,
-          only: ['modal'],
+          only,
         })
 
         let props = payload.props
-        if (options.only) {
-          props = Object.fromEntries(
-            options.only.filter((key) => key in props).map((key) => [key, props[key]])
-          )
-        } else if (options.except) {
+        if (options.except) {
           const except = new Set(options.except)
           props = Object.fromEntries(Object.entries(props).filter(([key]) => !except.has(key)))
         }
