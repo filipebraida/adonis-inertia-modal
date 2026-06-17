@@ -15,6 +15,7 @@ import {
 import { router as inertiaRouter } from '@inertiajs/react'
 
 import { createFetchClient } from '../core/fetch_client.ts'
+import { ModalHistory } from '../core/history.ts'
 import { requestModal, type HttpClientLike } from '../core/open.ts'
 import { PrefetchCache } from '../core/prefetch_cache.ts'
 import { generateId, ModalStack } from '../core/stack.ts'
@@ -46,6 +47,12 @@ export function ModalStackProvider({
   }
   const stackInstance = stackRef.current
 
+  const historyRef = useRef<ModalHistory | null>(null)
+  if (!historyRef.current) {
+    historyRef.current = new ModalHistory()
+  }
+  const modalHistory = historyRef.current
+
   const stack = useSyncExternalStore(
     stackInstance.subscribe,
     stackInstance.getSnapshot,
@@ -75,8 +82,22 @@ export function ModalStackProvider({
   const prevUrlRef = useRef<string | undefined>(undefined)
   const syncPage = useCallback((next: PageInfo) => setPage(next), [])
 
+  // Close the popped modal directly (Back already removed the browser entry).
+  useEffect(() => {
+    modalHistory.install((id) => stackInstance.close(id))
+  }, [modalHistory, stackInstance])
+
   // Mark closing (fires onClose); the modal's leave transition drives remove().
-  const close = useCallback((id: string) => stackInstance.close(id), [stackInstance])
+  // A UI close of a history-tracked modal also rolls back its browser entry.
+  const close = useCallback(
+    (id: string) => {
+      if (modalHistory.tracks(id)) {
+        modalHistory.release(id)
+      }
+      stackInstance.close(id)
+    },
+    [stackInstance, modalHistory]
+  )
   const closeAll = useCallback(() => stackInstance.closeAll(), [stackInstance])
   const remove = useCallback((id: string) => stackInstance.remove(id), [stackInstance])
 
@@ -165,6 +186,10 @@ export function ModalStackProvider({
           }
         }
 
+        if (options.history) {
+          modalHistory.push(entry.id)
+        }
+
         options.onSuccess?.()
         return entry
       } catch (error) {
@@ -172,7 +197,7 @@ export function ModalStackProvider({
         throw error
       }
     },
-    [client, stackInstance]
+    [client, stackInstance, modalHistory]
   )
 
   const reload = useCallback(

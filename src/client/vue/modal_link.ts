@@ -34,6 +34,8 @@ export const ModalLink = defineComponent({
     prefetch: { type: [Boolean, String, Array] as PropType<PrefetchOption>, default: false },
     /** Prefetch cache lifetime in ms (default 30000). */
     cacheFor: { type: Number, default: 30000 },
+    /** Push a browser-history entry so the Back button closes this modal. */
+    history: { type: Boolean, default: undefined },
   },
   emits: ['start', 'success', 'error', 'close', 'afterLeave'],
   setup(props, { slots, emit, attrs }) {
@@ -90,6 +92,7 @@ export const ModalLink = defineComponent({
             ...props.config,
             ...(props.slideover !== undefined ? { slideover: props.slideover } : {}),
           },
+          history: props.history,
           onStart: () => emit('start'),
           onSuccess: () => emit('success'),
           onError: (error) => emit('error', error),

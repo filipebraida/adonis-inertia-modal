@@ -23,6 +23,8 @@ export interface VisitOptions {
   onAfterLeave?: () => void
   listeners?: Record<string, (...args: unknown[]) => void>
   props?: Record<string, unknown>
+  /** Push a browser-history entry so the Back button closes this modal. */
+  history?: boolean
 }
 
 export interface ReloadOptions {

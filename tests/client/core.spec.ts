@@ -5,6 +5,7 @@ import { EventEmitter } from '../../src/client/core/event_emitter.ts'
 import { ModalStack } from '../../src/client/core/stack.ts'
 import { buildModalRequest, parseModalPayload } from '../../src/client/core/request.ts'
 import { lockBodyScroll } from '../../src/client/core/scroll_lock.ts'
+import { ModalHistory } from '../../src/client/core/history.ts'
 import { PrefetchCache } from '../../src/client/core/prefetch_cache.ts'
 import { resolvePanelClasses } from '../../src/client/core/presentation.ts'
 import type { ModalResponsePayload } from '../../src/client/core/types.ts'
@@ -88,6 +89,33 @@ test.group('core | resolvePanelClasses', () => {
       false
     )
     assert.equal(classes, 'im-panel im-max-w-lg p-8 shadow-xl ring')
+  })
+})
+
+test.group('core | ModalHistory', () => {
+  test('a Back (popstate) closes the top tracked modal', ({ assert }) => {
+    const history = new ModalHistory()
+    const closed: string[] = []
+    history.install((id) => closed.push(id))
+
+    history.push('m1')
+    assert.isTrue(history.tracks('m1'))
+
+    window.dispatchEvent(new Event('popstate'))
+
+    assert.deepEqual(closed, ['m1'])
+    assert.isFalse(history.tracks('m1'))
+  })
+
+  test('a UI release stops tracking the modal (rolls its entry back)', ({ assert }) => {
+    const history = new ModalHistory()
+    history.install(() => {})
+
+    history.push('m2')
+    assert.isTrue(history.tracks('m2'))
+
+    history.release('m2')
+    assert.isFalse(history.tracks('m2'))
   })
 })
 

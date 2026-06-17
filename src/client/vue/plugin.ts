@@ -6,6 +6,7 @@ import { shallowRef, type App, type Component } from 'vue'
 import { router as inertiaRouter } from '@inertiajs/vue3'
 
 import { createFetchClient } from '../core/fetch_client.ts'
+import { ModalHistory } from '../core/history.ts'
 import { requestModal, type HttpClientLike } from '../core/open.ts'
 import { PrefetchCache } from '../core/prefetch_cache.ts'
 import { generateId, ModalStack } from '../core/stack.ts'
@@ -38,8 +39,18 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
 
   const cache = new PrefetchCache()
 
+  const modalHistory = new ModalHistory()
+  // Close the popped modal directly (Back already removed the browser entry).
+  modalHistory.install((id) => instance.close(id))
+
   // Mark closing (fires onClose); the modal's leave transition drives remove().
-  const close = (id: string) => instance.close(id)
+  // A UI close of a history-tracked modal also rolls back its browser entry.
+  const close = (id: string) => {
+    if (modalHistory.tracks(id)) {
+      modalHistory.release(id)
+    }
+    instance.close(id)
+  }
   const closeAll = () => instance.closeAll()
   const remove = (id: string) => instance.remove(id)
 
@@ -103,6 +114,9 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
       })
       if (opts.listeners) {
         for (const [event, cb] of Object.entries(opts.listeners)) entry.emitter.on(event, cb)
+      }
+      if (opts.history) {
+        modalHistory.push(entry.id)
       }
       opts.onSuccess?.()
       return entry

@@ -27,6 +27,8 @@ export interface VisitOptions {
   listeners?: Record<string, (...args: unknown[]) => void>
   /** Props for a local modal (href starting with `#`). */
   props?: Record<string, unknown>
+  /** Push a browser-history entry so the Back button closes this modal. */
+  history?: boolean
 }
 
 export interface ReloadOptions {

@@ -180,9 +180,13 @@ Opens a route in a modal (like Inertia's `<Link>`).
 ```
 
 Props: `href`, `method`, `data`, `headers`, `as`, `config`, `slideover`,
-`prefetch` (`hover`/`click`/`mount`), `cacheFor`. Callbacks: `onStart`,
+`prefetch` (`hover`/`click`/`mount`), `cacheFor`, `history`. Callbacks: `onStart`,
 `onSuccess`, `onError`, `onClose`, `onAfterLeave`. Render-prop exposes
 `{ loading }`. Extra `on<Event>` props become event-bus listeners.
+
+With `history` (opt-in), opening the modal pushes a browser-history entry so the
+**Back button closes it** (and closing via the UI rolls that entry back). Back-to-close
+only — Forward does not re-open a closed modal.
 
 ### `<Modal>` and `useModal()`
 

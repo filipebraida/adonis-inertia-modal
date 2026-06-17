@@ -31,6 +31,8 @@ export interface ModalLinkProps {
   prefetch?: PrefetchOption
   /** Prefetch cache lifetime in ms (default 30000). */
   cacheFor?: number
+  /** Push a browser-history entry so the Back button closes this modal. */
+  history?: boolean
   onStart?: () => void
   onSuccess?: () => void
   onError?: (error: unknown) => void
@@ -57,6 +59,7 @@ export function ModalLink({
   slideover,
   prefetch = false,
   cacheFor = 30000,
+  history,
   onStart,
   onSuccess,
   onError,
@@ -123,6 +126,7 @@ export function ModalLink({
           data,
           headers,
           config: { ...config, ...(slideover !== undefined ? { slideover } : {}) },
+          history,
           onStart: callbacks.onStart,
           onSuccess: callbacks.onSuccess,
           onError: callbacks.onError,
@@ -136,7 +140,7 @@ export function ModalLink({
         setLoading(false)
       }
     },
-    [href, method, data, headers, config, slideover, loading, visit]
+    [href, method, data, headers, config, slideover, history, loading, visit]
   )
 
   const handleMouseEnter = useCallback(() => {

@@ -14,6 +14,10 @@ First usable release. React and Vue 3 support.
   `panelClasses` (appended to the panel), from the per-modal `config` or global
   `putConfig`. Dropped the dead `useNativeDialog` / `appElement` config fields.
 - `useModalStack().closeAll()` closes every open modal (top-most first).
+- Opt-in browser-history integration: `<ModalLink history>` / `visit(href, { history: true })`
+  pushes a history entry so the **Back button closes the modal** (and a UI close rolls
+  the entry back), coordinating with Inertia's own popstate so the page isn't reloaded.
+  Back-to-close only (no Forward re-open).
 
 ### Server
 
