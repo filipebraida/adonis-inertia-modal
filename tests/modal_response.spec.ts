@@ -61,6 +61,41 @@ test.group('ModalResponse | via link (Path A)', () => {
 
     assert.equal(page.props.modal.redirectUrl, '/users')
   })
+
+  test('with() does not mutate the props object passed by the caller', async ({ assert }) => {
+    const { ctx, inertia } = viaLink('users/index')
+    const original = { user: { id: 1 } }
+
+    const page: any = await new ModalResponse(inertia, ctx, 'users/show', original)
+      .baseUrl('/users')
+      .with('extra', true)
+      .render()
+
+    assert.deepEqual(original, { user: { id: 1 } }) // caller's object untouched
+    assert.equal(page.props.modal.props.extra, true)
+  })
+})
+
+test.group('ModalResponse | redirect safety', () => {
+  test('keeps a relative redirect header as the close target', async ({ assert }) => {
+    const { ctx, inertia } = viaLink('users/index')
+    ctx.request.request.headers['x-inertia-modal-redirect'] = '/dashboard?tab=1'
+
+    const page: any = await new ModalResponse(inertia, ctx, 'users/show').baseUrl('/users').render()
+
+    assert.equal(page.props.modal.redirectUrl, '/dashboard?tab=1')
+  })
+
+  test('rejects an off-origin redirect header (open-redirect guard) and falls back to the base URL', async ({
+    assert,
+  }) => {
+    const { ctx, inertia } = viaLink('users/index')
+    ctx.request.request.headers['x-inertia-modal-redirect'] = 'https://evil.example/phish'
+
+    const page: any = await new ModalResponse(inertia, ctx, 'users/show').baseUrl('/users').render()
+
+    assert.equal(page.props.modal.redirectUrl, '/users')
+  })
 })
 
 test.group('ModalResponse | validation', () => {

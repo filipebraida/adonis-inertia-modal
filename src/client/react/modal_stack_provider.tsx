@@ -16,10 +16,11 @@ import { router as inertiaRouter } from '@inertiajs/react'
 
 import { createFetchClient } from '../core/fetch_client.ts'
 import { requestModal, type HttpClientLike } from '../core/open.ts'
+import { PrefetchCache } from '../core/prefetch_cache.ts'
 import { generateId, ModalStack } from '../core/stack.ts'
 import type { ModalEntry, ModalResponsePayload } from '../core/types.ts'
 import { ModalStackContext, type ModalStackContextValue } from './context.ts'
-import type { PageInfo, ReloadOptions, VisitOptions } from './types.ts'
+import type { PageInfo, PrefetchOptions, ReloadOptions, VisitOptions } from './types.ts'
 
 export interface ModalStackProviderProps {
   children: ReactNode
@@ -83,25 +84,17 @@ export function ModalStackProvider({
   )
 
   /**
-   * Prefetch cache: href+method+data -> { payload, expires }.
+   * Bounded prefetch cache keyed by href+method+data.
    */
-  const cacheRef = useRef<Map<string, { payload: ModalResponsePayload; expires: number }>>(
-    new Map()
-  )
-  const cacheKey = (href: string, method?: string, data?: Record<string, unknown>) =>
-    `${method ?? 'get'}:${href}:${data ? JSON.stringify(data) : ''}`
+  const cacheRef = useRef(new PrefetchCache())
 
   const prefetch = useCallback(
-    async (
-      href: string,
-      options: { method?: any; data?: any; headers?: any; cacheFor?: number } = {}
-    ) => {
+    async (href: string, options: PrefetchOptions = {}) => {
       if (href.startsWith('#')) {
         return
       }
-      const key = cacheKey(href, options.method, options.data)
-      const cached = cacheRef.current.get(key)
-      if (cached && cached.expires > Date.now()) {
+      const key = PrefetchCache.key(href, options.method, options.data)
+      if (cacheRef.current.has(key)) {
         return
       }
       const current = pageRef.current
@@ -114,7 +107,7 @@ export function ModalStackProvider({
         version: current.version,
         redirectUrl: current.url,
       })
-      cacheRef.current.set(key, { payload, expires: Date.now() + (options.cacheFor ?? 30000) })
+      cacheRef.current.set(key, payload, options.cacheFor)
     },
     [client]
   )
@@ -149,20 +142,18 @@ export function ModalStackProvider({
       try {
         const current = pageRef.current
         // Serve from the prefetch cache when available (and unexpired).
-        const key = cacheKey(href, options.method, options.data)
-        const cached = cacheRef.current.get(key)
+        const key = PrefetchCache.key(href, options.method, options.data)
         const payload =
-          cached && cached.expires > Date.now()
-            ? cached.payload
-            : await requestModal(client, {
-                href,
-                method: options.method,
-                data: options.data,
-                headers: options.headers,
-                currentComponent: current.component,
-                version: current.version,
-                redirectUrl: current.url,
-              })
+          cacheRef.current.get(key) ??
+          (await requestModal(client, {
+            href,
+            method: options.method,
+            data: options.data,
+            headers: options.headers,
+            currentComponent: current.component,
+            version: current.version,
+            redirectUrl: current.url,
+          }))
 
         const entry = stackInstance.push(payload, {
           url: href,

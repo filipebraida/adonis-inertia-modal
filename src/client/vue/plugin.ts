@@ -7,6 +7,7 @@ import { router as inertiaRouter } from '@inertiajs/vue3'
 
 import { createFetchClient } from '../core/fetch_client.ts'
 import { requestModal, type HttpClientLike } from '../core/open.ts'
+import { PrefetchCache } from '../core/prefetch_cache.ts'
 import { generateId, ModalStack } from '../core/stack.ts'
 import type { ModalEntry, ModalResponsePayload } from '../core/types.ts'
 import { modalStackKey, type ModalContext } from './context.ts'
@@ -35,9 +36,7 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
     ((name: string) => inertiaRouter.resolveComponent(name) as Promise<Component>)
   const navigate = options.navigate ?? ((url: string) => inertiaRouter.visit(url))
 
-  const cache = new Map<string, { payload: ModalResponsePayload; expires: number }>()
-  const cacheKey = (href: string, method?: string, data?: Record<string, unknown>) =>
-    `${method ?? 'get'}:${href}:${data ? JSON.stringify(data) : ''}`
+  const cache = new PrefetchCache()
 
   const close = (id: string) => {
     instance.close(id)
@@ -46,9 +45,8 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
 
   const prefetch = async (href: string, opts: PrefetchOptions = {}) => {
     if (href.startsWith('#')) return
-    const key = cacheKey(href, opts.method, opts.data)
-    const cached = cache.get(key)
-    if (cached && cached.expires > Date.now()) return
+    const key = PrefetchCache.key(href, opts.method, opts.data)
+    if (cache.has(key)) return
     const current = page.value
     const payload = await requestModal(client, {
       href,
@@ -59,7 +57,7 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
       version: current.version,
       redirectUrl: current.url,
     })
-    cache.set(key, { payload, expires: Date.now() + (opts.cacheFor ?? 30000) })
+    cache.set(key, payload, opts.cacheFor)
   }
 
   const visit = async (href: string, opts: VisitOptions = {}): Promise<ModalEntry> => {
@@ -84,20 +82,18 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
     opts.onStart?.()
     try {
       const current = page.value
-      const key = cacheKey(href, opts.method, opts.data)
-      const cached = cache.get(key)
+      const key = PrefetchCache.key(href, opts.method, opts.data)
       const payload =
-        cached && cached.expires > Date.now()
-          ? cached.payload
-          : await requestModal(client, {
-              href,
-              method: opts.method,
-              data: opts.data,
-              headers: opts.headers,
-              currentComponent: current.component,
-              version: current.version,
-              redirectUrl: current.url,
-            })
+        cache.get(key) ??
+        (await requestModal(client, {
+          href,
+          method: opts.method,
+          data: opts.data,
+          headers: opts.headers,
+          currentComponent: current.component,
+          version: current.version,
+          redirectUrl: current.url,
+        }))
 
       const entry = instance.push(payload, {
         url: href,

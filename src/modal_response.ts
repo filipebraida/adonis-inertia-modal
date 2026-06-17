@@ -71,13 +71,19 @@ export class ModalResponse {
   #forceBase = false
   #renderPromise?: Promise<unknown>
 
+  private props: ModalProps
+
   constructor(
     private inertia: InertiaLike,
     private ctx: HttpContext,
     private component: string,
-    private props: ModalProps = {},
+    props: ModalProps = {},
     private router?: RouterLike
-  ) {}
+  ) {
+    // Copy so `.with(...)` never mutates the caller's object (a controller may
+    // reuse or share the props it passes in).
+    this.props = { ...props }
+  }
 
   /**
    * Set the backdrop URL directly.
@@ -315,16 +321,35 @@ export class ModalResponse {
 
     const request = this.ctx.request
     const headerRedirect = request.header(ModalHeaders.Redirect)
-    if (headerRedirect) {
-      return headerRedirect
-    }
+    const referer = request.header(InertiaHeaders.Inertia) ? request.header('referer') : undefined
+    const candidate = headerRedirect ?? referer
 
-    const referer = request.header('referer')
-    if (request.header(InertiaHeaders.Inertia) && referer) {
-      return referer
-    }
+    return (candidate && this.#sameOriginPath(candidate)) || this.#resolveBaseUrl()
+  }
 
-    return this.#resolveBaseUrl()
+  /**
+   * Reduce a redirect candidate to a safe same-origin path. The candidate comes
+   * from client-controlled headers (`x-inertia-modal-redirect` / `referer`), so
+   * an absolute URL to another host is rejected to avoid an open redirect when
+   * the client navigates here on close. Root-relative paths pass through;
+   * same-host absolute URLs are reduced to path+query; anything else returns
+   * undefined (caller falls back to the base URL).
+   */
+  #sameOriginPath(value: string): string | undefined {
+    // Root-relative path (but not a protocol-relative "//host").
+    if (value.startsWith('/') && !value.startsWith('//')) {
+      return value
+    }
+    try {
+      const host = this.ctx.request.host()
+      const url = new URL(value)
+      if (host && url.host === host) {
+        return `${url.pathname}${url.search}`
+      }
+    } catch {
+      // Not a parseable absolute URL — fall through to undefined.
+    }
+    return undefined
   }
 
   /**

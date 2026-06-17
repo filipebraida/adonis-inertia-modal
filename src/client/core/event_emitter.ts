@@ -27,7 +27,15 @@ export class EventEmitter {
   }
 
   emit(event: string, ...args: unknown[]): void {
-    this.#listeners.get(event)?.forEach((callback) => callback(...args))
+    const listeners = this.#listeners.get(event)
+    if (!listeners) {
+      return
+    }
+    // Snapshot so a listener that subscribes/unsubscribes during dispatch can't
+    // mutate the set being iterated (skipping or double-invoking callbacks).
+    for (const callback of [...listeners]) {
+      callback(...args)
+    }
   }
 
   /**

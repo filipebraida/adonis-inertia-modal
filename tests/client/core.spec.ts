@@ -5,6 +5,8 @@ import { EventEmitter } from '../../src/client/core/event_emitter.ts'
 import { ModalStack } from '../../src/client/core/stack.ts'
 import { buildModalRequest, parseModalPayload } from '../../src/client/core/request.ts'
 import { lockBodyScroll } from '../../src/client/core/scroll_lock.ts'
+import { PrefetchCache } from '../../src/client/core/prefetch_cache.ts'
+import type { ModalResponsePayload } from '../../src/client/core/types.ts'
 
 test.group('core | Config', () => {
   test('returns defaults and supports dot-path get/put', ({ assert }) => {
@@ -78,6 +80,50 @@ test.group('core | EventEmitter', () => {
     emitter.registerFromProps({ onIncreaseBy: (n: unknown) => (fromProp = n) })
     emitter.emit('increaseBy', 5)
     assert.equal(fromProp, 5)
+  })
+
+  test('a listener that unsubscribes during dispatch does not disrupt the others', ({ assert }) => {
+    const emitter = new EventEmitter()
+    const calls: string[] = []
+
+    const offA = emitter.on('e', () => {
+      calls.push('a')
+      offA() // mutate the listener set mid-dispatch
+    })
+    emitter.on('e', () => calls.push('b'))
+
+    emitter.emit('e')
+    assert.deepEqual(calls, ['a', 'b']) // both still fire
+
+    calls.length = 0
+    emitter.emit('e')
+    assert.deepEqual(calls, ['b']) // 'a' stayed unsubscribed
+  })
+})
+
+test.group('core | PrefetchCache', () => {
+  const payload = { component: 'm', props: {}, key: 'k' } as ModalResponsePayload
+
+  test('serves a live payload and treats expired entries as misses', ({ assert }) => {
+    const cache = new PrefetchCache()
+    cache.set('a', payload, 1000)
+    assert.equal(cache.get('a'), payload)
+    assert.isTrue(cache.has('a'))
+
+    cache.set('b', payload, -1) // already expired
+    assert.isUndefined(cache.get('b'))
+  })
+
+  test('caps size by evicting the oldest entry', ({ assert }) => {
+    const cache = new PrefetchCache(2)
+    cache.set('a', payload, 1000)
+    cache.set('b', payload, 1000)
+    cache.set('c', payload, 1000) // evicts 'a'
+
+    assert.isUndefined(cache.get('a'))
+    assert.equal(cache.get('b'), payload)
+    assert.equal(cache.get('c'), payload)
+    assert.equal(cache.size, 2)
   })
 })
 
