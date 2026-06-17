@@ -321,6 +321,13 @@ fetched and the current page stays as the backdrop. When opened directly by URL,
 the server dispatches the base route to render the backdrop, then layers the
 modal on top — keeping the modal route deep-linkable.
 
+## SSR
+
+The client is SSR-safe — it never touches `window`/`document` during render, so
+server-side rendering won't crash. A deep-linked modal's backdrop is rendered on
+the server; the modal itself mounts after client hydration (it is not yet part of
+the initial server HTML). Rendering deep-linked modals during SSR is planned.
+
 ## Credits
 
 Architecture inspired by [inertiaui/modal](https://github.com/inertiaui/modal),

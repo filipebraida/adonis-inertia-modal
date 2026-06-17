@@ -20,6 +20,8 @@ First usable release. React and Vue 3 support.
   Back-to-close only (no Forward re-open).
 - `navigate` mode: `<ModalLink navigate>` (or `putConfig('navigate', true)`) opens the
   route as a full page instead of a modal — a responsive opt-out.
+- SSR-safe: no `window`/`document` access during render. Deep-linked modals mount
+  after client hydration (full server-side modal rendering is planned).
 
 ### Server
 
