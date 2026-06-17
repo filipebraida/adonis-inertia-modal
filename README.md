@@ -162,7 +162,12 @@ export default function CreateNote() {
   return (
     <Modal>
       {({ close }) => (
-        <form onSubmit={(e) => { e.preventDefault(); form.post('/notes', { onSuccess: () => close() }) }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            form.post('/notes', { onSuccess: () => close() })
+          }}
+        >
           <input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} />
           {form.errors.title && <span>{form.errors.title}</span>}
           <button disabled={form.processing}>Save</button>

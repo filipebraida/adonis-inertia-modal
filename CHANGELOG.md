@@ -18,6 +18,8 @@ First usable release. React support; Vue planned.
 - Resolves the adapter's prop wrappers (`defer`/`optional`/`merge`/`always`) and
   dot-notation **inside** `modal.props`; deferred props are listed for the client
   and computed on a sparse reload.
+- Serializes `modal.props` like top-level Inertia props, so transformer outputs
+  (`SomeTransformer.transform(...)`), Lucid models and dates resolve to plain JSON.
 
 ### React client (`adonis-inertia-modal/react`)
 

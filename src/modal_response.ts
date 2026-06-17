@@ -6,11 +6,26 @@
 
 import { randomUUID } from 'node:crypto'
 import type { HttpContext } from '@adonisjs/core/http'
+import { BaseSerializer } from '@adonisjs/core/transformers'
 import { InertiaHeaders } from '@adonisjs/inertia'
 
 import { ModalHeaders } from './headers.ts'
 import { resolveModalProps, type ResolveModalPropsOptions } from './resolve_modal_props.ts'
 import type { ModalPayload, ModalProps } from './types.ts'
+
+/**
+ * Serializes modal prop values the same way the Inertia adapter serializes
+ * top-level page props, so transformer outputs (`SomeTransformer.transform(...)`),
+ * Lucid models, dates, etc. resolve to plain JSON inside `modal.props` — which
+ * the adapter would otherwise leave unresolved because they're nested.
+ */
+class ModalSerializer extends BaseSerializer {
+  wrap: undefined = undefined
+  definePaginationMetaData(metaData: unknown): unknown {
+    return metaData
+  }
+}
+const modalSerializer = new ModalSerializer()
 
 /**
  * Minimal surface of the per-request Inertia instance we rely on. Keeping it
@@ -205,7 +220,7 @@ export class ModalResponse {
       component: this.component,
       baseUrl: this.#resolveBaseUrl(),
       redirectUrl: this.#redirectUrl(),
-      props: resolved.props,
+      props: await this.#serializeProps(resolved.props),
       key: this.#modalKey(),
     }
 
@@ -220,6 +235,24 @@ export class ModalResponse {
     }
 
     return payload
+  }
+
+  /**
+   * Serialize each modal prop value via the adapter's serializer (transformers,
+   * Lucid models, dates → plain JSON), mirroring how Inertia serializes
+   * top-level props.
+   */
+  async #serializeProps(props: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const resolver = (this.ctx as any).containerResolver
+    const entries = await Promise.all(
+      Object.entries(props).map(async ([key, value]) => {
+        if (value === null || value === undefined) {
+          return [key, value] as const
+        }
+        return [key, await modalSerializer.serialize(value as never, resolver)] as const
+      })
+    )
+    return Object.fromEntries(entries)
   }
 
   /**

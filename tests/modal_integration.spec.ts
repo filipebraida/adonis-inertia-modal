@@ -1,8 +1,34 @@
 import { test } from '@japa/runner'
 import { InertiaManager, InertiaHeaders } from '@adonisjs/inertia'
+import { BaseTransformer } from '@adonisjs/core/transformers'
 import { HttpContextFactory, RequestFactory } from '@adonisjs/core/factories/http'
 
 import { setupApp, setupViewMacroMock } from './helpers.ts'
+
+class ThingTransformer extends BaseTransformer<{ id: number; name: string; secret: string }> {
+  toObject() {
+    return this.pick(this.resource, ['id', 'name'])
+  }
+}
+
+class BookTransformer extends BaseTransformer<{ id: number; title: string }> {
+  toObject() {
+    return this.pick(this.resource, ['id', 'title'])
+  }
+}
+
+class AuthorTransformer extends BaseTransformer<{
+  id: number
+  name: string
+  books: { id: number; title: string }[]
+}> {
+  toObject() {
+    return {
+      ...this.pick(this.resource, ['id', 'name']),
+      books: BookTransformer.transform(this.resource.books),
+    }
+  }
+}
 
 /**
  * Integration tests: exercise ModalResponse through a real booted AdonisJS app
@@ -163,5 +189,52 @@ test.group('ModalResponse | integration', (group) => {
     assert.deepEqual(page.props.modal.props.stats, { visits: 5 })
     assert.notProperty(page.props.modal.props, 'user')
     assert.equal(page.props.modal.key, 'kept-key')
+  })
+
+  test('serializes transformer outputs nested in modal.props', async ({ assert }) => {
+    const { inertia } = await modalContext({
+      [InertiaHeaders.Inertia]: 'true',
+      [InertiaHeaders.PartialComponent]: 'users/index',
+      [InertiaHeaders.PartialOnly]: 'modal',
+    })
+
+    const page: any = await inertia
+      .modal('users/show', {
+        thing: ThingTransformer.transform({ id: 1, name: 'Ada', secret: 'hide-me' }),
+      })
+      .baseRoute('users.index')
+
+    // The lazy transformer Item is resolved to its plain (picked) object.
+    assert.deepEqual(page.props.modal.props.thing, { id: 1, name: 'Ada' })
+  })
+
+  test('resolves nested transformers (relations) inside modal.props', async ({ assert }) => {
+    const { inertia } = await modalContext({
+      [InertiaHeaders.Inertia]: 'true',
+      [InertiaHeaders.PartialComponent]: 'users/index',
+      [InertiaHeaders.PartialOnly]: 'modal',
+    })
+
+    const page: any = await inertia
+      .modal('authors/show', {
+        author: AuthorTransformer.transform({
+          id: 1,
+          name: 'Ada',
+          books: [
+            { id: 10, title: 'Notes' },
+            { id: 11, title: 'Engine' },
+          ],
+        }),
+      })
+      .baseRoute('users.index')
+
+    assert.deepEqual(page.props.modal.props.author, {
+      id: 1,
+      name: 'Ada',
+      books: [
+        { id: 10, title: 'Notes' },
+        { id: 11, title: 'Engine' },
+      ],
+    })
   })
 })
