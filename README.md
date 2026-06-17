@@ -19,9 +19,7 @@ export default class UsersController {
   async show({ inertia, params }: HttpContext) {
     const user = await User.findOrFail(params.id)
 
-    return inertia
-      .modal('users/show', { user })
-      .baseRoute('users.index') // backdrop when opened directly via URL
+    return inertia.modal('users/show', { user }).baseRoute('users.index') // backdrop when opened directly via URL
   }
 }
 ```
@@ -46,13 +44,13 @@ node ace configure adonis-modal
 
 `inertia.modal(component, props?)` returns a chainable, awaitable builder:
 
-| Method | Description |
-| --- | --- |
-| `.baseRoute(name, params?)` | Backdrop URL from a route name. |
-| `.baseUrl(url)` | Backdrop URL directly. |
-| `.with(props)` / `.with(key, value)` | Merge extra props. |
-| `.refreshBackdrop(refresh?)` | Re-render the backdrop with fresh data. |
-| `.forceBase(force?)` | Ignore referer/redirect header; close to the base URL. |
+| Method                               | Description                                            |
+| ------------------------------------ | ------------------------------------------------------ |
+| `.baseRoute(name, params?)`          | Backdrop URL from a route name.                        |
+| `.baseUrl(url)`                      | Backdrop URL directly.                                 |
+| `.with(props)` / `.with(key, value)` | Merge extra props.                                     |
+| `.refreshBackdrop(refresh?)`         | Re-render the backdrop with fresh data.                |
+| `.forceBase(force?)`                 | Ignore referer/redirect header; close to the base URL. |
 
 Props support dot-notation keys (`'stats.today'`) so partial reloads of
 `modal.props.*` work.

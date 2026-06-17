@@ -26,6 +26,9 @@ importers:
       '@adonisjs/tsconfig':
         specifier: ^2.0.0
         version: 2.0.0
+      '@adonisjs/vite':
+        specifier: ^5.1.0
+        version: 5.1.1(@adonisjs/assembler@8.4.0(typescript@5.9.3))(@adonisjs/core@7.3.4(@adonisjs/assembler@8.4.0(typescript@5.9.3))(edge.js@6.5.1)(youch@4.1.1))(edge.js@6.5.1)(vite@7.3.5(@types/node@25.9.3)(jiti@2.7.0))
       '@japa/assert':
         specifier: ^4.2.0
         version: 4.2.0(@japa/runner@5.3.0)
@@ -50,6 +53,9 @@ importers:
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
+      edge.js:
+        specifier: ^6.2.1
+        version: 6.5.1
       eslint:
         specifier: ^10.0.3
         version: 10.5.0(jiti@2.7.0)
