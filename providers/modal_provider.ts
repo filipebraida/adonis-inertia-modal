@@ -8,7 +8,7 @@ import type { ApplicationService } from '@adonisjs/core/types'
 import type { HttpContext } from '@adonisjs/core/http'
 import { Inertia } from '@adonisjs/inertia'
 
-import { ModalResponse } from '../src/modal_response.ts'
+import { ModalResponse, type InertiaLike } from '../src/modal_response.ts'
 import type { Backdrop, ModalProps } from '../src/types.ts'
 
 /**
@@ -46,7 +46,14 @@ export default class ModalProvider {
       backdrop: Backdrop
     ) {
       const ctx = (this as unknown as { ctx: HttpContext }).ctx
-      return new ModalResponse(this as unknown as any, ctx, component, props, backdrop, router)
+      return new ModalResponse(
+        this as unknown as InertiaLike,
+        ctx,
+        component,
+        props,
+        backdrop,
+        router
+      )
     }
   }
 }

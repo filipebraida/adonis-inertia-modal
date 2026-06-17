@@ -33,7 +33,7 @@ export const ModalRoot = defineComponent({
         ctx.syncPage({
           component: page.component,
           url: page.url,
-          version: (page as { version?: string }).version,
+          version: page.version,
           props: page.props,
         })
       },

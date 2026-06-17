@@ -31,7 +31,7 @@ const modalSerializer = new ModalSerializer()
  * Minimal surface of the per-request Inertia instance we rely on. Keeping it
  * structural avoids a hard type coupling with the adapter's generic `Inertia`.
  */
-interface InertiaLike {
+export interface InertiaLike {
   share(state: Record<string, unknown>): unknown
   render(component: string, props: Record<string, unknown>): unknown
 }

@@ -10,6 +10,7 @@ import {
   onBeforeUnmount,
   onMounted,
   ref,
+  type Component,
   type PropType,
 } from 'vue'
 
@@ -154,7 +155,7 @@ export const ModalLink = defineComponent({
       }
 
       return h(
-        props.as as never,
+        props.as as string | Component,
         {
           ...domAttrs,
           href: props.href,
