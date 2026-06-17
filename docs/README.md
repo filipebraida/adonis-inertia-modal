@@ -4,6 +4,10 @@ Biblioteca de modais para o adapter oficial de Inertia.js do AdonisJS.
 
 ## Design
 
+- [Plano de desenvolvimento](./design/development-plan.md) — fases core-first
+  (React primeiro), o que entra em cada uma e a definição de "núcleo".
+- [Plano detalhado por fase](./design/phases-detailed.md) — design, referências de
+  código real (inertiaui/momentum/adapter) e estratégia de teste por fase.
 - [Arquitetura backend-driven](./design/backend-driven-architecture.md) — design
   técnico da abordagem escolhida (API server-side, protocolo HTTP, frontend, riscos).
 - [Spike: viabilidade do server dispatch](./design/spike-server-dispatch.md) —
@@ -15,6 +19,9 @@ Biblioteca de modais para o adapter oficial de Inertia.js do AdonisJS.
 
 ## Estudos
 
+- [Referência de features (inertiaui)](./research/inertiaui-feature-reference.md) —
+  spec destilada da doc oficial do inertiaui (API React, config, comportamentos) com
+  o impacto de cada feature no nosso modelo backend-driven.
 - [Soluções de Modal para Inertia.js](./research/inertia-modal-solutions.md) —
   levantamento das soluções existentes (Laravel, Rails) e as duas arquiteturas
   (frontend-driven vs backend-driven), com recomendações para a nossa lib.
