@@ -5,13 +5,12 @@ Backend-driven modals for [Inertia.js](https://inertiajs.com) on
 deep-linkable, validation-aware, with the backdrop page preserved — without
 fighting client-side state.
 
-> Status: early development. The server-side is implemented; the frontend plugin
-> is next. See [`docs/`](./docs) for the research, the chosen architecture and
-> the feasibility spike.
+> Status: early development (React supported; Vue planned). Validated end-to-end
+> in a real AdonisJS 7 + React 19 app.
 
-## Idea
+## Why
 
-A controller declares that a response is a modal:
+A controller decides a response is a modal:
 
 ```ts
 // app/controllers/users_controller.ts
@@ -19,19 +18,24 @@ export default class UsersController {
   async show({ inertia, params }: HttpContext) {
     const user = await User.findOrFail(params.id)
 
-    return inertia.modal('users/show', { user }).baseRoute('users.index') // backdrop when opened directly via URL
+    return inertia.modal('users/show', { user }).baseRoute('users.index')
   }
 }
 ```
 
-The modal is delivered as a shared `modal` prop on a regular Inertia page, so:
+The modal is delivered as a shared `modal` prop on a normal Inertia page, so:
 
-- **Opened via a link** — the current page stays as the backdrop and the modal
-  is stacked on top.
-- **Opened directly via URL** — the base route renders the backdrop and the
-  modal appears on top (deep-linkable, SEO-friendly).
-- **Validation errors** — flow through Inertia's shared `errors` without
-  reloading or remounting the modal.
+- **Opened via a link** — the current page stays as the backdrop, the modal stacks on top.
+- **Opened directly via URL** — the base route renders the backdrop and the modal appears
+  on top (deep-linkable, SEO-friendly, browser URL stays on the modal route).
+- **Validation errors** — flow through Inertia's shared `errors` without reloading or
+  remounting the modal.
+
+## Requirements
+
+- `@adonisjs/core` ^7
+- `@adonisjs/inertia` ^4 (Inertia v2 client) — forward-compatible with ^5 (v3)
+- React 18/19 + `@inertiajs/react` ^2
 
 ## Install
 
@@ -40,9 +44,47 @@ npm i adonis-modal
 node ace configure adonis-modal
 ```
 
+`configure` registers the provider and prints the wiring steps below.
+
+### Wire the frontend
+
+```tsx
+// inertia/app.tsx
+import 'adonis-modal/styles.css'
+import { ModalStackProvider } from 'adonis-modal/react'
+
+createInertiaApp({
+  resolve: (name) => resolvePageComponent(/* ... */),
+  setup({ el, App, props }) {
+    createRoot(el).render(
+      <ModalStackProvider>
+        <App {...props} />
+      </ModalStackProvider>
+    )
+  },
+})
+```
+
+Render `<ModalRoot />` once **inside** the app (e.g. in a layout or persistent
+layout), where Inertia's `usePage()` is available:
+
+```tsx
+import { ModalRoot } from 'adonis-modal/react'
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <ModalRoot />
+    </>
+  )
+}
+```
+
 ## Server API
 
-`inertia.modal(component, props?)` returns a chainable, awaitable builder:
+`inertia.modal(component, props?)` returns a chainable, awaitable builder — just
+`return` it from a controller.
 
 | Method                               | Description                                            |
 | ------------------------------------ | ------------------------------------------------------ |
@@ -52,23 +94,135 @@ node ace configure adonis-modal
 | `.refreshBackdrop(refresh?)`         | Re-render the backdrop with fresh data.                |
 | `.forceBase(force?)`                 | Ignore referer/redirect header; close to the base URL. |
 
-Props support dot-notation keys (`'stats.today'`) so partial reloads of
-`modal.props.*` work.
+Modal props support dot-notation keys (`'stats.today'`) and the adapter's prop
+wrappers **inside** the modal:
 
-## Compatibility
+```ts
+return inertia
+  .modal('invoices/show', {
+    invoice,
+    lines: inertia.defer(() => invoice.related('lines').query()), // <Deferred>
+    customer: inertia.optional(() => invoice.related('customer').query()), // <WhenVisible>
+  })
+  .baseRoute('invoices.index')
+```
 
-Targets `@adonisjs/core@^7` and `@adonisjs/inertia@^4` (Inertia v2 client).
-Designed to be forward-compatible with the Inertia v3 adapter
-(`@adonisjs/inertia@^5`). See [`docs/design/inertia-v3-compat.md`](./docs/design/inertia-v3-compat.md).
+## Client API (React)
 
-## Docs
+### `<ModalLink>`
 
-- [Research & architecture](./docs/README.md)
+Opens a route in a modal (like Inertia's `<Link>`).
+
+```tsx
+<ModalLink href="/users/1" /* method, data, headers, as */>Open</ModalLink>
+<ModalLink href="/users/create" slideover>New user</ModalLink>
+<ModalLink href="/users/1" prefetch="hover">Open</ModalLink>
+```
+
+Props: `href`, `method`, `data`, `headers`, `as`, `config`, `slideover`,
+`prefetch` (`hover`/`click`/`mount`), `cacheFor`. Callbacks: `onStart`,
+`onSuccess`, `onError`, `onClose`, `onAfterLeave`. Render-prop exposes
+`{ loading }`. Extra `on<Event>` props become event-bus listeners.
+
+### `<Modal>` and `useModal()`
+
+The page that should render as a modal wraps itself in `<Modal>`:
+
+```tsx
+import { Modal, useModal } from 'adonis-modal/react'
+
+export default function ShowUser({ user }) {
+  return (
+    <Modal>
+      {({ close }) => (
+        <>
+          <h1>{user.name}</h1>
+          <button onClick={close}>Close</button>
+        </>
+      )}
+    </Modal>
+  )
+}
+```
+
+`useModal()` (inside a modal) returns `{ props, errors, config, isOpen,
+onTopOfStack, close, reload, emit, on }`.
+
+### Forms & validation
+
+```tsx
+const modal = useModal()!
+// modal.errors.email is populated after a failed submit — the modal stays open.
+// modal.reload({ only: ['stats'] }) re-fetches specific (deferred) props.
+```
+
+### Deferred / lazy props
+
+```tsx
+import { Deferred, WhenVisible } from 'adonis-modal/react'
+
+<Deferred data="lines" fallback={<p>Loading…</p>}>
+  <Lines />
+</Deferred>
+
+<WhenVisible data="customer" fallback={<p>Loading…</p>}>
+  <Customer />
+</WhenVisible>
+```
+
+### Nested, slideover & event bus
+
+```tsx
+// Open a modal from within a modal — it stacks automatically.
+<Modal>
+  <ModalLink href="/users/1/edit">Edit</ModalLink>
+</Modal>
+
+// Emit up to the opener:
+<ModalLink href="/users/create" onCreated={(user) => /* ... */}>New</ModalLink>
+// inside the modal: useModal()!.emit('created', user)
+```
+
+### Programmatic & local modals
+
+```tsx
+import { useModalStack, Modal } from 'adonis-modal/react'
+
+const { visitModal } = useModalStack()
+visitModal('/users/create', { slideover: true })
+
+// Local (client-only) modal — no server request:
+visitModal('#confirm', { props: { message: 'Sure?' } })
+<Modal name="confirm">{({ props, close }) => <p>{props.message}</p>}</Modal>
+```
+
+### Headless mode
+
+```tsx
+import { HeadlessModal } from 'adonis-modal/react'
+
+<HeadlessModal>{(modal) => /* your own dialog UI */}</HeadlessModal>
+```
+
+### Configuration
+
+```ts
+import { putConfig } from 'adonis-modal/react'
+
+putConfig({ modal: { maxWidth: 'lg', closeButton: false } })
+putConfig('slideover.position', 'left')
+```
+
+## How it works
+
+See [`docs/`](./docs) for the research, the backend-driven architecture, the
+server-dispatch spike, the inertiaui feature reference and the phase plan.
 
 ## Credits
 
-Architecture inspired by [momentum-modal](https://github.com/lepikhinb/momentum-modal)
-and [emargareten/inertia-modal](https://github.com/emargareten/inertia-modal),
+Architecture inspired by [inertiaui/modal](https://github.com/inertiaui/modal),
+[momentum-modal](https://github.com/lepikhinb/momentum-modal) and
+[emargareten/inertia-modal](https://github.com/emargareten/inertia-modal),
 adapted to the AdonisJS Inertia adapter.
 
 ## License
