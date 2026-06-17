@@ -5,7 +5,7 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 ## 0.1.0 — Unreleased
 
-First usable release. React support; Vue planned.
+First usable release. React and Vue 3 support.
 
 ### Server
 
@@ -34,6 +34,18 @@ First usable release. React support; Vue planned.
 - Headless mode: `HeadlessModal`.
 - Prefetch on `hover` / `click` / `mount` with `cacheFor`.
 - Configuration: `putConfig` / `getConfig` / `resetConfig`.
+
+### Vue client (`adonis-inertia-modal/vue`)
+
+- Vue 3 plugin (`app.use(modal, { resolve })`) sharing the framework-agnostic
+  core with React; same component surface: `ModalRoot`, `ModalLink`, `Modal`,
+  `useModal`, `useModalStack` (`visit`/`visitModal`), `Deferred`, `WhenVisible`,
+  `HeadlessModal`, and `putConfig`/`getConfig`/`resetConfig`.
+- Scoped-slot API: `<Modal v-slot="{ props, close }">`; reactive `useModal()`
+  returns a `ComputedRef`. Extra `@event` listeners on `<ModalLink>` become
+  event-bus listeners.
+- Same native `<dialog>` behavior (top-layer, `::backdrop`, Esc / backdrop-click
+  close, scroll-lock) and deep-link / nested / slideover / prefetch support.
 
 ### Tooling
 

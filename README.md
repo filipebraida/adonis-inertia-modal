@@ -5,7 +5,7 @@ Backend-driven modals for [Inertia.js](https://inertiajs.com) on
 deep-linkable, validation-aware, with the backdrop page preserved — without
 fighting client-side state.
 
-> Status: early development (React supported; Vue planned). Validated end-to-end
+> Status: early development (React and Vue 3 supported). Validated end-to-end
 > in a real AdonisJS 7 + React 19 app.
 
 ## Why
@@ -35,7 +35,7 @@ The modal is delivered as a shared `modal` prop on a normal Inertia page, so:
 
 - `@adonisjs/core` ^7
 - `@adonisjs/inertia` ^4 (Inertia v2 client) — forward-compatible with ^5 (v3)
-- React 18/19 + `@inertiajs/react` ^2
+- React 18/19 + `@inertiajs/react` ^2, **or** Vue 3 + `@inertiajs/vue3` ^2
 
 ## Install
 
@@ -48,7 +48,7 @@ node ace add adonis-inertia-modal
 
 > Prefer doing it manually? `npm i adonis-inertia-modal && node ace configure adonis-inertia-modal`.
 
-### Wire the frontend
+### Wire the frontend (React)
 
 ```tsx
 // inertia/app.tsx
@@ -82,6 +82,64 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   )
 }
 ```
+
+### Wire the frontend (Vue 3)
+
+```ts
+// inertia/app.ts
+import 'adonis-inertia-modal/styles.css'
+import { createApp, h } from 'vue'
+import { createInertiaApp } from '@inertiajs/vue3'
+import { modal } from 'adonis-inertia-modal/vue'
+
+createInertiaApp({
+  resolve: (name) => resolvePageComponent(/* ... */),
+  setup({ el, App, props, plugin }) {
+    createApp({ render: () => h(App, props) })
+      .use(plugin)
+      // Pass Inertia's page resolver so modal pages resolve the same way.
+      .use(modal, { resolveComponent: (name) => resolvePageComponent(/* ... */) })
+      .mount(el)
+  },
+})
+```
+
+Render `<ModalRoot />` once **inside** the app (e.g. in a layout), where Inertia's
+`usePage()` is available:
+
+```vue
+<script setup lang="ts">
+import { ModalRoot } from 'adonis-inertia-modal/vue'
+</script>
+
+<template>
+  <slot />
+  <ModalRoot />
+</template>
+```
+
+A page renders as a modal by wrapping itself in `<Modal>` (a scoped slot exposes
+the modal instance), and `<ModalLink>` opens a route in a modal:
+
+```vue
+<script setup lang="ts">
+import { Modal, ModalLink, useModal } from 'adonis-inertia-modal/vue'
+
+defineProps<{ user: { name: string } }>()
+</script>
+
+<template>
+  <Modal v-slot="{ close }">
+    <h1>{{ user.name }}</h1>
+    <button @click="close">Close</button>
+  </Modal>
+</template>
+```
+
+`useModal()` returns a reactive `ComputedRef` of the modal instance
+(`modal.value.props`, `.errors`, `.close()`, `.reload()`, `.emit()`, …). Extra
+`@event` listeners on `<ModalLink>` become event-bus listeners. The server API
+and all features below are identical across React and Vue.
 
 ## Server API
 

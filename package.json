@@ -18,6 +18,7 @@
     "./types": "./build/src/types.js",
     "./modal_provider": "./build/providers/modal_provider.js",
     "./react": "./build/src/client/react/index.js",
+    "./vue": "./build/src/client/vue/index.js",
     "./styles.css": "./styles.css"
   },
   "scripts": {
@@ -64,6 +65,7 @@
     "@happy-dom/global-registrator": "^16.8.1",
     "@inertiajs/core": "^2.3.26",
     "@inertiajs/react": "^2.3.26",
+    "@inertiajs/vue3": "^2.3.26",
     "@japa/assert": "^4.2.0",
     "@japa/runner": "^5.3.0",
     "@poppinss/ts-exec": "^1.4.4",
@@ -73,6 +75,7 @@
     "@types/node": "^25.3.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vue/test-utils": "^2.4.11",
     "c8": "^11.0.0",
     "copyfiles": "^2.4.1",
     "cross-env": "^10.1.0",
@@ -83,15 +86,18 @@
     "react-dom": "^19.2.7",
     "release-it": "^19.2.4",
     "tsdown": "^0.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vue": "^3.5.38"
   },
   "peerDependencies": {
     "@adonisjs/assembler": "^8.0.0",
     "@adonisjs/core": "^7.0.0",
     "@adonisjs/inertia": "^4.0.0 || ^5.0.0-next.0",
     "@inertiajs/react": "^2.0.0",
+    "@inertiajs/vue3": "^2.0.0",
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "vue": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "@adonisjs/assembler": {
@@ -100,10 +106,16 @@
     "@inertiajs/react": {
       "optional": true
     },
+    "@inertiajs/vue3": {
+      "optional": true
+    },
     "react": {
       "optional": true
     },
     "react-dom": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     }
   },
@@ -117,7 +129,8 @@
       "./stubs/main.ts",
       "./src/types.ts",
       "./providers/modal_provider.ts",
-      "./src/client/react/index.ts"
+      "./src/client/react/index.ts",
+      "./src/client/vue/index.ts"
     ],
     "outDir": "./build",
     "clean": true,
