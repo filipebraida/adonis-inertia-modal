@@ -71,6 +71,7 @@ export function ModalStackProvider({
   const [page, setPage] = useState<PageInfo>(EMPTY_PAGE)
   const pageRef = useRef(page)
   pageRef.current = page
+  const prevUrlRef = useRef<string | undefined>(undefined)
   const syncPage = useCallback((next: PageInfo) => setPage(next), [])
 
   const close = useCallback(
@@ -236,9 +237,33 @@ export function ModalStackProvider({
    */
   const pageModal = page.props?.modal as ModalResponsePayload | undefined
   useEffect(() => {
+    /**
+     * A real navigation (URL change) closes any open modals. This handles e.g.
+     * a successful form submit that redirects to a page without a modal. Cleared
+     * silently (no onClose) since we're already on the new page.
+     */
+    const navigated = prevUrlRef.current !== undefined && prevUrlRef.current !== page.url
+    prevUrlRef.current = page.url
+    if (navigated) {
+      stackInstance.reset()
+    }
+
     if (!pageModal || !pageModal.key || stackInstance.get(pageModal.key)) {
       return
     }
+
+    /**
+     * If the top modal is the same one re-rendered (same component + backdrop) —
+     * e.g. a validation redirect-back re-rendered the modal route with a fresh
+     * key — update it in place instead of stacking a duplicate. This keeps the
+     * modal mounted (form state preserved) and surfaces the new `errors`.
+     */
+    const top = stackInstance.top
+    if (top && top.component === pageModal.component && top.baseUrl === pageModal.baseUrl) {
+      stackInstance.updateProps(top.id, pageModal.props)
+      return
+    }
+
     stackInstance.push(pageModal, {
       url: pageRef.current.url,
       onClose: () => {
@@ -247,7 +272,7 @@ export function ModalStackProvider({
         }
       },
     })
-  }, [pageModal, stackInstance, doNavigate])
+  }, [page.url, pageModal, stackInstance, doNavigate])
 
   const value: ModalStackContextValue = {
     stack,

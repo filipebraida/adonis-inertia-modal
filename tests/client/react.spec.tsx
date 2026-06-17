@@ -142,6 +142,71 @@ test.group('react | deep-link (page props modal)', (group) => {
     await waitFor(() => assert.isNull(screen.queryByText('User: Deep')))
     assert.equal(navigatedTo, '/users')
   })
+
+  test('a re-rendered deep-link modal updates in place (no duplicate)', async ({ assert }) => {
+    function Harness({ getPage }: { getPage: () => PageInfo }) {
+      return (
+        <ModalStackProvider
+          httpClient={clientReturning({ component: 'users/show', props: {}, key: 'x' })}
+          resolveComponent={async () => ShowUser as never}
+        >
+          <ModalRoot usePageHook={getPage} />
+        </ModalStackProvider>
+      )
+    }
+
+    let page: PageInfo = {
+      component: 'users/index',
+      url: '/m/new',
+      props: { modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' } },
+    }
+    const { rerender } = render(<Harness getPage={() => page} />)
+    await screen.findByText('User: A')
+
+    // Validation redirect-back: same component + baseUrl, NEW key + errors.
+    page = {
+      component: 'users/index',
+      url: '/m/new',
+      props: {
+        modal: { component: 'users/show', props: { name: 'A' }, key: 'k2', baseUrl: '/m' },
+        errors: { name: 'Required' },
+      },
+    }
+    rerender(<Harness getPage={() => page} />)
+
+    await waitFor(() =>
+      assert.equal((document.querySelectorAll('.im-dialog') as ArrayLike<unknown>).length, 1)
+    )
+  })
+
+  test('navigating to a page without a modal closes the open modal', async ({ assert }) => {
+    function Harness({ getPage }: { getPage: () => PageInfo }) {
+      return (
+        <ModalStackProvider
+          httpClient={clientReturning({ component: 'users/show', props: {}, key: 'x' })}
+          resolveComponent={async () => ShowUser as never}
+        >
+          <ModalRoot usePageHook={getPage} />
+        </ModalStackProvider>
+      )
+    }
+
+    let page: PageInfo = {
+      component: 'modal_demo',
+      url: '/m/new',
+      props: { modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' } },
+    }
+    const { rerender } = render(<Harness getPage={() => page} />)
+    await screen.findByText('User: A')
+
+    // Navigate to a page without a modal (e.g. a successful submit redirect).
+    page = { component: 'modal_demo', url: '/m', props: {} }
+    rerender(<Harness getPage={() => page} />)
+
+    await waitFor(() =>
+      assert.equal((document.querySelectorAll('.im-dialog') as ArrayLike<unknown>).length, 0)
+    )
+  })
 })
 
 test.group('react | forms & reload', (group) => {
