@@ -2,8 +2,9 @@
  * adonis-inertia-modal — React client
  */
 
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 
+import { useModalStack } from './context.ts'
 import { useResolvedModal, type UseModalReturn } from './use_modal.ts'
 
 export interface HeadlessModalProps {
@@ -17,11 +18,21 @@ export interface HeadlessModalProps {
  * Like <Modal>, but renders no UI of its own. You get the modal instance
  * (props, close, reload, emit, config, ...) and build the dialog, backdrop,
  * transitions and accessibility yourself. Renders nothing when no modal is open.
+ *
+ * Headless has no built-in leave transition, so it hides as soon as the modal is
+ * marked closing and removes the entry from the stack itself.
  */
 export function HeadlessModal({ children, name }: HeadlessModalProps) {
   const modal = useResolvedModal(name)
+  const { remove } = useModalStack()
 
-  if (!modal) {
+  useEffect(() => {
+    if (modal && !modal.isOpen) {
+      remove(modal.id)
+    }
+  }, [modal?.isOpen, modal?.id, remove])
+
+  if (!modal || !modal.isOpen) {
     return null
   }
 

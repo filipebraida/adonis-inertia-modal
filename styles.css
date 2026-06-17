@@ -59,3 +59,52 @@
   border: 0;
   cursor: pointer;
 }
+
+/*
+ * Enter/leave transitions. The leave is driven by a `data-leaving` attribute
+ * the client sets before removing the modal; the client reads the panel's
+ * transition-duration to know how long to wait. Enter uses @starting-style
+ * (progressive — ignored where unsupported). Respects reduced-motion.
+ */
+.im-panel {
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+.im-dialog::backdrop {
+  transition: opacity 150ms ease;
+}
+.im-dialog[data-leaving] .im-panel {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.im-slideover[data-leaving] .im-panel {
+  transform: translateX(100%);
+}
+.im-slideover.im-position-left[data-leaving] .im-panel {
+  transform: translateX(-100%);
+}
+.im-dialog[data-leaving]::backdrop {
+  opacity: 0;
+}
+@starting-style {
+  .im-dialog[open] .im-panel {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  .im-slideover[open] .im-panel {
+    transform: translateX(100%);
+  }
+  .im-slideover.im-position-left[open] .im-panel {
+    transform: translateX(-100%);
+  }
+  .im-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .im-panel,
+  .im-dialog::backdrop {
+    transition: none;
+  }
+}

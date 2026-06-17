@@ -546,6 +546,31 @@ test.group('react | prefetch', (group) => {
 test.group('react | close behaviors', (group) => {
   group.each.teardown(() => cleanup())
 
+  test('closing fires onClose then onAfterLeave and removes the modal', async ({ assert }) => {
+    const events: string[] = []
+    renderApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'L' }, key: 'k1' }),
+      ui: (
+        <ModalLink
+          href="/m"
+          onClose={() => events.push('close')}
+          onAfterLeave={() => events.push('afterLeave')}
+        >
+          open
+        </ModalLink>
+      ),
+    })
+
+    fireEvent.click(screen.getByText('open'))
+    await screen.findByText('User: L')
+
+    fireEvent.click(screen.getByText('close-modal'))
+    await waitFor(() => assert.isNull(screen.queryByText('User: L')))
+
+    // Deferred removal: onClose on close(), onAfterLeave once the entry is removed.
+    assert.deepEqual(events, ['close', 'afterLeave'])
+  })
+
   test('closeButton={false} hides the close button', async ({ assert }) => {
     function NoButton() {
       return <Modal closeButton={false}>body</Modal>

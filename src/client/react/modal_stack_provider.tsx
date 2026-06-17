@@ -75,13 +75,9 @@ export function ModalStackProvider({
   const prevUrlRef = useRef<string | undefined>(undefined)
   const syncPage = useCallback((next: PageInfo) => setPage(next), [])
 
-  const close = useCallback(
-    (id: string) => {
-      stackInstance.close(id)
-      stackInstance.remove(id)
-    },
-    [stackInstance]
-  )
+  // Mark closing (fires onClose); the modal's leave transition drives remove().
+  const close = useCallback((id: string) => stackInstance.close(id), [stackInstance])
+  const remove = useCallback((id: string) => stackInstance.remove(id), [stackInstance])
 
   /**
    * Bounded prefetch cache keyed by href+method+data.
@@ -272,6 +268,7 @@ export function ModalStackProvider({
     visit,
     visitModal: visit,
     close,
+    remove,
     reload,
     prefetch,
     syncPage,

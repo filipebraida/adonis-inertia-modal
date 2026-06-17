@@ -64,11 +64,13 @@ export function useResolvedModal(name?: string): UseModalReturn | null {
   const ctx = useModalStack()
   const index = useModalIndex()
 
+  // Resolve while the entry EXISTS (not only while isOpen): the <Modal> must
+  // stay mounted through its leave transition so it can drive removal.
   if (name) {
-    const local = ctx.stack.find((item) => item.name === name && item.local && item.isOpen)
+    const local = ctx.stack.find((item) => item.name === name && item.local)
     return local ? createModalInstance(local, ctx) : null
   }
 
   const entry = ctx.stack[index]
-  return entry && entry.isOpen ? createModalInstance(entry, ctx) : null
+  return entry ? createModalInstance(entry, ctx) : null
 }

@@ -38,10 +38,9 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
 
   const cache = new PrefetchCache()
 
-  const close = (id: string) => {
-    instance.close(id)
-    instance.remove(id)
-  }
+  // Mark closing (fires onClose); the modal's leave transition drives remove().
+  const close = (id: string) => instance.close(id)
+  const remove = (id: string) => instance.remove(id)
 
   const prefetch = async (href: string, opts: PrefetchOptions = {}) => {
     if (href.startsWith('#')) return
@@ -177,6 +176,7 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
     visit,
     visitModal: visit,
     close,
+    remove,
     reload,
     prefetch,
     syncPage,

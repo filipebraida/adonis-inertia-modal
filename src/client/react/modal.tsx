@@ -5,6 +5,8 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 import { lockBodyScroll } from '../core/scroll_lock.ts'
+import { leaveDurationMs } from '../core/transition.ts'
+import { useModalStack } from './context.ts'
 import { useResolvedModal, type UseModalReturn } from './use_modal.ts'
 
 export interface ModalProps {
@@ -30,6 +32,7 @@ function ModalShell({
   modal: UseModalReturn
 } & Pick<ModalProps, 'children' | 'onClose' | 'closeButton'>) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
+  const { remove } = useModalStack()
 
   const closeExplicitly = modal.config.closeExplicitly === true
   const closeOnClickOutside = modal.config.closeOnClickOutside !== false
@@ -62,6 +65,35 @@ function ModalShell({
       dialog.open = true // jsdom/happy-dom fallback
     }
   }, [modal.isOpen])
+
+  // When marked closing, play the leave transition (if any) on the panel, then
+  // close the native dialog (proper top-layer/focus unwind) and remove the entry
+  // (fires onAfterLeave). Removal is synchronous when no transition is defined.
+  useEffect(() => {
+    if (modal.isOpen) {
+      return
+    }
+    const dialog = dialogRef.current
+    const panel = dialog?.querySelector<HTMLElement>('.im-panel') ?? null
+    const finish = () => {
+      if (dialog?.open) {
+        try {
+          dialog.close()
+        } catch {
+          dialog.open = false
+        }
+      }
+      remove(modal.id)
+    }
+    const ms = dialog ? leaveDurationMs(dialog, panel) : 0
+    if (ms <= 0) {
+      finish()
+      return
+    }
+    dialog?.setAttribute('data-leaving', '')
+    const timer = setTimeout(finish, ms + 20)
+    return () => clearTimeout(timer)
+  }, [modal.isOpen, modal.id, remove])
 
   // Close on Esc for the top-most modal (unless closeExplicitly). Handled at the
   // document level so it works regardless of where focus currently is.

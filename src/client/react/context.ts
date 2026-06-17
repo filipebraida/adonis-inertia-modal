@@ -14,7 +14,10 @@ export interface ModalStackContextValue {
   visit: (href: string, options?: VisitOptions) => Promise<ModalEntry>
   /** Programmatic alias of visit() for opening a modal from code. */
   visitModal: (href: string, options?: VisitOptions) => Promise<ModalEntry>
+  /** Mark a modal as closing (isOpen=false, fires onClose). Removal is deferred. */
   close: (id: string) => void
+  /** Remove a closed modal from the stack (fires onAfterLeave). Called by the UI after its leave transition. */
+  remove: (id: string) => void
   reload: (id: string, options?: ReloadOptions) => Promise<void>
   /** Pre-fetch a modal into the cache so the next open is instant. */
   prefetch: (href: string, options?: PrefetchOptions) => Promise<void>

@@ -5,6 +5,8 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { lockBodyScroll } from '../core/scroll_lock.ts'
+import { leaveDurationMs } from '../core/transition.ts'
+import { useModalStack } from './context.ts'
 import { useResolvedModal } from './use_modal.ts'
 
 /**
@@ -29,11 +31,13 @@ export const Modal = defineComponent({
   emits: ['close'],
   setup(props, { slots, emit }) {
     const modal = useResolvedModal(props.name)
+    const stack = useModalStack()
     const dialog = ref<HTMLDialogElement | null>(null)
 
     let closed = false
     let unlockScroll: (() => void) | null = null
     let keydownHandler: ((event: KeyboardEvent) => void) | null = null
+    let leaveTimer: ReturnType<typeof setTimeout> | null = null
 
     const handleClose = () => {
       if (closed) return
@@ -42,33 +46,59 @@ export const Modal = defineComponent({
       modal.value?.close()
     }
 
-    // Open / close the native dialog reacting to isOpen. The initial open is
-    // driven from onMounted (below) — NOT an immediate watcher — because an
-    // immediate watch fires synchronously during setup, before the dialog ref is
-    // attached, so showModal() would be skipped and never re-run (isOpen stays
-    // true). The watcher here only handles subsequent isOpen transitions.
-    const syncDialog = (isOpen: boolean) => {
+    // Open the native dialog. Driven from onMounted (below) for the initial open
+    // — NOT an immediate watcher — because an immediate watch fires synchronously
+    // during setup, before the dialog ref is attached, so showModal() would be
+    // skipped and never re-run (isOpen stays true).
+    const openDialog = () => {
       const el = dialog.value
-      if (!el) return
-      if (isOpen && !el.open) {
-        if (typeof el.showModal === 'function') {
-          el.showModal()
-          // Ensure focus lands inside the dialog.
-          if (!el.contains(document.activeElement)) {
-            el.querySelector<HTMLElement>(
-              '[autofocus], button, [href], input, select, textarea'
-            )?.focus()
-          }
-        } else {
-          el.open = true // jsdom/happy-dom fallback
+      if (!el || el.open) return
+      if (typeof el.showModal === 'function') {
+        el.showModal()
+        // Ensure focus lands inside the dialog.
+        if (!el.contains(document.activeElement)) {
+          el.querySelector<HTMLElement>(
+            '[autofocus], button, [href], input, select, textarea'
+          )?.focus()
         }
-      } else if (!isOpen && el.open) {
-        if (typeof el.close === 'function') el.close()
-        else el.open = false
+      } else {
+        el.open = true // jsdom/happy-dom fallback
       }
     }
 
-    watch(() => modal.value?.isOpen ?? false, syncDialog, { flush: 'post' })
+    // When marked closing, play the leave transition (if any) on the panel, then
+    // close the native dialog (top-layer/focus unwind) and remove the entry
+    // (fires onAfterLeave). Synchronous when no transition is defined.
+    const playLeave = (id: string) => {
+      const el = dialog.value
+      const panel = el?.querySelector<HTMLElement>('.im-panel') ?? null
+      const finish = () => {
+        if (el?.open) {
+          if (typeof el.close === 'function') el.close()
+          else el.open = false
+        }
+        stack.remove(id)
+      }
+      const ms = el ? leaveDurationMs(el, panel) : 0
+      if (ms <= 0) {
+        finish()
+        return
+      }
+      el?.setAttribute('data-leaving', '')
+      leaveTimer = setTimeout(finish, ms + 20)
+    }
+
+    watch(
+      () => modal.value?.isOpen ?? false,
+      (isOpen) => {
+        if (isOpen) {
+          openDialog()
+        } else if (modal.value) {
+          playLeave(modal.value.id)
+        }
+      },
+      { flush: 'post' }
+    )
 
     // Close on Esc for the top-most modal (unless closeExplicitly). Handled at
     // the document level so it works regardless of where focus currently is.
@@ -98,11 +128,12 @@ export const Modal = defineComponent({
     // here, where the dialog ref is guaranteed attached.
     onMounted(() => {
       unlockScroll = lockBodyScroll()
-      syncDialog(modal.value?.isOpen ?? false)
+      if (modal.value?.isOpen) openDialog()
     })
 
     onBeforeUnmount(() => {
       unlockScroll?.()
+      if (leaveTimer) clearTimeout(leaveTimer)
       if (typeof document !== 'undefined' && keydownHandler) {
         document.removeEventListener('keydown', keydownHandler)
       }

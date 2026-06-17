@@ -55,14 +55,16 @@ export function useResolvedModal(name?: string): ComputedRef<UseModalReturn | nu
   const ctx = useModalStack()
   const index = useModalIndex()
 
+  // Resolve while the entry EXISTS (not only while isOpen): the <Modal> must
+  // stay mounted through its leave transition so it can drive removal.
   return computed(() => {
     if (name) {
-      const local = ctx.stack.value.find((item) => item.name === name && item.local && item.isOpen)
+      const local = ctx.stack.value.find((item) => item.name === name && item.local)
       return local ? createModalInstance(local, ctx) : null
     }
 
     const entry = ctx.stack.value[index]
-    return entry && entry.isOpen ? createModalInstance(entry, ctx) : null
+    return entry ? createModalInstance(entry, ctx) : null
   })
 }
 

@@ -563,6 +563,33 @@ test.group('vue | prefetch & close behaviors', (group) => {
     wrappers.splice(0).forEach((w) => w.unmount())
   })
 
+  test('closing fires close then afterLeave and removes the modal', async ({ assert }) => {
+    const events: string[] = []
+    const { wrapper } = mountApp({
+      client: clientReturning({ component: 'users/show', props: { name: 'L' }, key: 'k1' }),
+      ui: () =>
+        h(
+          ModalLink,
+          {
+            href: '/m',
+            onClose: () => events.push('close'),
+            onAfterLeave: () => events.push('afterLeave'),
+          },
+          { default: () => 'open' }
+        ),
+    })
+
+    await clickText(wrapper, 'open')
+    await tick()
+    assert.include(wrapper.text(), 'User: L')
+
+    await clickText(wrapper, 'close-modal')
+    await tick()
+
+    assert.notInclude(wrapper.text(), 'User: L')
+    assert.deepEqual(events, ['close', 'afterLeave'])
+  })
+
   test('prefetch on mount serves the open from cache (single request)', async ({ assert }) => {
     let calls = 0
     const client: HttpClientLike = {
