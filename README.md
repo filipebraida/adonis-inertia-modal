@@ -336,8 +336,12 @@ z-index. Popover primitives from Radix, Base UI, Floating UI, shadcn/ui, etc.
 default to portaling their content to `document.body`, which lives *below* the
 `::backdrop` and stays invisible.
 
-Read the enclosing dialog element with `useModalContainer()` and pass it as the
-portal target of your popover primitive. Outside a modal the hook returns
+Read the enclosing modal panel with `useModalContainer()` and pass it as the
+portal target of your popover primitive. The panel is a descendant of the
+`<dialog>`, so its subtree inherits the top-layer; it also sits inside the
+panel's `stopPropagation` guard, which prevents popovers that unmount
+synchronously on `pointerdown` (e.g. Base UI Select) from bubbling a stray
+click to the dialog and closing the modal. Outside a modal the hook returns
 `null`, so popovers fall back to their default (`document.body`) — you can wire
 this once in your design system and forget about it.
 

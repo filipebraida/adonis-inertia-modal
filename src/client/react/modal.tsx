@@ -47,13 +47,16 @@ function ModalShell({
   presentation: ModalPresentationProps
 } & Pick<ModalProps, 'children' | 'onClose'>) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
-  const [dialogEl, setDialogEl] = useState<HTMLDialogElement | null>(null)
+  const [panelEl, setPanelEl] = useState<HTMLDivElement | null>(null)
   // Callback ref: setState so consumers of useModalContainer() re-render once
-  // the <dialog> is in the DOM. A plain ref would leave them with the initial
-  // null value forever.
-  const setDialogNode = useCallback((node: HTMLDialogElement | null) => {
-    dialogRef.current = node
-    setDialogEl(node)
+  // the panel is in the DOM. A plain ref would leave them with the initial
+  // null value forever. The panel (not the <dialog>) is the portal target so
+  // popover contents land inside the panel's onClick={stopPropagation} guard:
+  // otherwise a popover that unmounts synchronously (e.g. Base UI Select on
+  // pointerdown) leaves the follow-up `click` bubbling straight to the dialog,
+  // which reads it as a backdrop click and closes the modal.
+  const setPanelNode = useCallback((node: HTMLDivElement | null) => {
+    setPanelEl(node)
   }, [])
   const { remove } = useModalStack()
 
@@ -157,7 +160,7 @@ function ModalShell({
 
   return (
     <dialog
-      ref={setDialogNode}
+      ref={dialogRef}
       className={dialogClass}
       data-modal-id={modal.id}
       data-modal-index={modal.index}
@@ -177,6 +180,7 @@ function ModalShell({
       }}
     >
       <div
+        ref={setPanelNode}
         className={resolvePanelClasses(config, isSlideover)}
         onClick={(event) => event.stopPropagation()}
       >
@@ -190,7 +194,7 @@ function ModalShell({
             &times;
           </button>
         )}
-        <ModalContainerContext.Provider value={dialogEl}>
+        <ModalContainerContext.Provider value={panelEl}>
           {typeof children === 'function' ? children(modal) : children}
         </ModalContainerContext.Provider>
       </div>

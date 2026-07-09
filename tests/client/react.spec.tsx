@@ -969,11 +969,11 @@ test.group('react | error handling', (group) => {
 test.group('react | portal container', (group) => {
   group.each.teardown(() => cleanup())
 
-  test('useModalContainer() returns the <dialog> of the enclosing <Modal>', async ({ assert }) => {
+  test('useModalContainer() returns the panel of the enclosing <Modal>', async ({ assert }) => {
     function ContainerProbe() {
       const container = useModalContainer()
       return (
-        <span data-testid="probe">{container ? (container.tagName ?? '') : 'null'}</span>
+        <span data-testid="probe">{container ? (container.className ?? '') : 'null'}</span>
       )
     }
     function Page() {
@@ -991,9 +991,13 @@ test.group('react | portal container', (group) => {
     })
 
     fireEvent.click(screen.getByText('Open'))
-    await waitFor(() => assert.equal(screen.getByTestId('probe').textContent, 'DIALOG'))
-    const container = document.querySelector('[data-testid="probe"]')?.closest('dialog')
-    assert.isNotNull(container)
+    await waitFor(() =>
+      assert.match(screen.getByTestId('probe').textContent ?? '', /(^|\s)im-panel(\s|$)/)
+    )
+    // The panel is a descendant of the <dialog>, so a popover portaled here
+    // inherits the top-layer.
+    const probe = document.querySelector('[data-testid="probe"]')
+    assert.isNotNull(probe?.closest('dialog'))
   })
 
   test('useModalContainer() returns null when used outside a <Modal>', ({ assert }) => {
@@ -1011,11 +1015,8 @@ test.group('react | portal container', (group) => {
   }) => {
     function InnerProbe() {
       const container = useModalContainer()
-      return (
-        <span data-testid="inner-probe">
-          {container ? String(container.getAttribute('data-modal-index')) : 'null'}
-        </span>
-      )
+      const index = container?.closest('dialog')?.getAttribute('data-modal-index') ?? 'null'
+      return <span data-testid="inner-probe">{index}</span>
     }
     function Inner() {
       return (
