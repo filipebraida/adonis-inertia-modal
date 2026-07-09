@@ -7,6 +7,16 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
+### beta.5
+
+- **React:** `useModalContainer()` publishes the enclosing `<dialog>` element
+  via context. Popover / select / combobox libraries (Radix, Base UI, Floating
+  UI, shadcn/ui…) default to portaling into `document.body`, which sits below
+  the native dialog backdrop because modal dialogs are promoted to the browser
+  top-layer. Read the hook and pass its value as your popover's `container` to
+  portal into the top-layer; outside a modal it returns `null` (default
+  behavior). Additive, no API change.
+
 ### beta.4
 
 - Internal type hygiene (no API/behavior change): access `ctx.containerResolver`
