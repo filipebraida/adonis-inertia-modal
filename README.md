@@ -328,6 +328,39 @@ Per-modal presentation comes from `config` (on `<ModalLink>`) or `putConfig`:
 `maxWidth` (`sm`…`7xl`/`full`) maps to an `im-max-w-*` class; `panelClasses` /
 `paddingClasses` are appended to the panel so you can add your own.
 
+### Popovers, selects & comboboxes inside a modal
+
+`<Modal>` opens a native `<dialog>` in modal mode, which the browser promotes to
+its **top-layer** — a rendering layer above every other element, unreachable by
+z-index. Popover primitives from Radix, Base UI, Floating UI, shadcn/ui, etc.
+default to portaling their content to `document.body`, which lives *below* the
+`::backdrop` and stays invisible.
+
+Read the enclosing dialog element with `useModalContainer()` and pass it as the
+portal target of your popover primitive. Outside a modal the hook returns
+`null`, so popovers fall back to their default (`document.body`) — you can wire
+this once in your design system and forget about it.
+
+```tsx
+import { useModalContainer } from 'adonis-inertia-modal/react'
+import * as Select from '@radix-ui/react-select'
+
+export function AppSelect(props: Select.SelectProps) {
+  const container = useModalContainer()
+  return (
+    <Select.Root {...props}>
+      <Select.Trigger />
+      <Select.Portal container={container ?? undefined}>
+        <Select.Content>{/* ... */}</Select.Content>
+      </Select.Portal>
+    </Select.Root>
+  )
+}
+```
+
+Stacked modals resolve automatically: each `<Modal>` provides its own container,
+so a popover inside the innermost modal portals into the innermost dialog.
+
 ### Headless mode
 
 ```tsx

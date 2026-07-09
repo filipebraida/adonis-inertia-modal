@@ -8,6 +8,7 @@ import { Modal } from '../../src/client/react/modal.tsx'
 import { Deferred } from '../../src/client/react/deferred.tsx'
 import { HeadlessModal } from '../../src/client/react/headless_modal.tsx'
 import { useModalStack } from '../../src/client/react/context.ts'
+import { useModalContainer } from '../../src/client/react/modal_container_context.ts'
 import useModal from '../../src/client/react/use_modal.ts'
 import { putConfig, resetConfig } from '../../src/client/core/config.ts'
 import type { HttpClientLike } from '../../src/client/core/open.ts'
@@ -962,5 +963,103 @@ test.group('react | error handling', (group) => {
     } finally {
       console.error = original
     }
+  })
+})
+
+test.group('react | portal container', (group) => {
+  group.each.teardown(() => cleanup())
+
+  test('useModalContainer() returns the <dialog> of the enclosing <Modal>', async ({ assert }) => {
+    function ContainerProbe() {
+      const container = useModalContainer()
+      return (
+        <span data-testid="probe">{container ? (container.tagName ?? '') : 'null'}</span>
+      )
+    }
+    function Page() {
+      return (
+        <Modal>
+          <ContainerProbe />
+        </Modal>
+      )
+    }
+
+    renderApp({
+      client: clientReturning({ component: 'users/show', props: {}, key: 'k1' }),
+      component: Page,
+      ui: <ModalLink href="/users/1">Open</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open'))
+    await waitFor(() => assert.equal(screen.getByTestId('probe').textContent, 'DIALOG'))
+    const container = document.querySelector('[data-testid="probe"]')?.closest('dialog')
+    assert.isNotNull(container)
+  })
+
+  test('useModalContainer() returns null when used outside a <Modal>', ({ assert }) => {
+    let seen: HTMLElement | null | undefined
+    function Probe() {
+      seen = useModalContainer()
+      return null
+    }
+    render(<Probe />)
+    assert.isNull(seen ?? null)
+  })
+
+  test('stacked modals: inner useModalContainer() resolves to the inner <dialog>', async ({
+    assert,
+  }) => {
+    function InnerProbe() {
+      const container = useModalContainer()
+      return (
+        <span data-testid="inner-probe">
+          {container ? String(container.getAttribute('data-modal-index')) : 'null'}
+        </span>
+      )
+    }
+    function Inner() {
+      return (
+        <Modal>
+          <InnerProbe />
+        </Modal>
+      )
+    }
+    function Outer() {
+      return (
+        <Modal>
+          <ModalLink href="/users/2">Open inner</ModalLink>
+        </Modal>
+      )
+    }
+
+    // First open returns the outer, subsequent opens return the inner.
+    let calls = 0
+    const client: HttpClientLike = {
+      request: () =>
+        Promise.resolve({
+          data: {
+            props: {
+              modal: {
+                component: calls++ === 0 ? 'outer' : 'inner',
+                props: {},
+                key: `k${calls}`,
+              },
+            },
+          },
+        }),
+    }
+
+    renderApp({
+      client,
+      resolve: async (name) => (name === 'inner' ? Inner : Outer) as never,
+      ui: <ModalLink href="/users/1">Open outer</ModalLink>,
+    })
+
+    fireEvent.click(screen.getByText('Open outer'))
+    await screen.findByText('Open inner')
+
+    fireEvent.click(screen.getByText('Open inner'))
+    // The inner modal has index=1 in the stack; the outer index=0.
+    await waitFor(() => assert.equal(screen.getByTestId('inner-probe').textContent, '1'))
   })
 })

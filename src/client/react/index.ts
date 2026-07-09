@@ -13,6 +13,7 @@ export { HeadlessModal, type HeadlessModalProps } from './headless_modal.tsx'
 export { useResolvedModal } from './use_modal.ts'
 export { default as useModal, type UseModalReturn } from './use_modal.ts'
 export { useModalStack, useModalIndex, type ModalStackContextValue } from './context.ts'
+export { ModalContainerContext, useModalContainer } from './modal_container_context.ts'
 export type {
   PageInfo,
   VisitOptions,

@@ -2,13 +2,14 @@
  * adonis-inertia-modal — React client
  */
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { getConfigByType } from '../core/config.ts'
 import { mergePresentation, resolvePanelClasses } from '../core/presentation.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
+import { ModalContainerContext } from './modal_container_context.ts'
 import { useResolvedModal, type UseModalReturn } from './use_modal.ts'
 
 /** Presentation overrides a modal page can declare on itself (the opener's config still wins). */
@@ -46,6 +47,14 @@ function ModalShell({
   presentation: ModalPresentationProps
 } & Pick<ModalProps, 'children' | 'onClose'>) {
   const dialogRef = useRef<HTMLDialogElement | null>(null)
+  const [dialogEl, setDialogEl] = useState<HTMLDialogElement | null>(null)
+  // Callback ref: setState so consumers of useModalContainer() re-render once
+  // the <dialog> is in the DOM. A plain ref would leave them with the initial
+  // null value forever.
+  const setDialogNode = useCallback((node: HTMLDialogElement | null) => {
+    dialogRef.current = node
+    setDialogEl(node)
+  }, [])
   const { remove } = useModalStack()
 
   // The opener's per-modal config wins over the page's <Modal> props.
@@ -148,7 +157,7 @@ function ModalShell({
 
   return (
     <dialog
-      ref={dialogRef}
+      ref={setDialogNode}
       className={dialogClass}
       data-modal-id={modal.id}
       data-modal-index={modal.index}
@@ -181,7 +190,9 @@ function ModalShell({
             &times;
           </button>
         )}
-        {typeof children === 'function' ? children(modal) : children}
+        <ModalContainerContext.Provider value={dialogEl}>
+          {typeof children === 'function' ? children(modal) : children}
+        </ModalContainerContext.Provider>
       </div>
     </dialog>
   )
