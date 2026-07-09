@@ -7,6 +7,17 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
+### beta.6
+
+- **React:** `useModalContainer()` now points to the modal panel (a descendant
+  of the `<dialog>`) instead of the `<dialog>` itself. Popovers that unmount
+  synchronously on `pointerdown` — Base UI Select for one — used to leak a
+  residual click straight to the dialog, which read it as a backdrop click and
+  closed the modal. Portaling into the panel puts the popover subtree inside
+  the panel's `stopPropagation` guard while still inheriting the top-layer
+  (the panel is inside the dialog). No consumer API change; existing calls
+  continue to work.
+
 ### beta.5
 
 - **React:** `useModalContainer()` publishes the enclosing `<dialog>` element
