@@ -372,9 +372,8 @@ export class ModalResponse {
     if (!session) {
       return false
     }
-    const errors = session.flashMessages.get('inputErrorsBag') as
-      | Record<string, unknown>
-      | undefined
+    const bag = session.flashMessages.get('inputErrorsBag')
+    const errors = bag as Record<string, unknown> | undefined
     return !!errors && Object.keys(errors).length > 0
   }
 
