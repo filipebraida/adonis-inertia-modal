@@ -20,12 +20,11 @@ import type { Backdrop, ModalProps } from '../src/types.ts'
  *
  * The backdrop is required (and typed `{ route } | { url }`), so a modal can't
  * be declared without a page to render behind it / navigate to on close.
+ *
+ * The type augmentation lives in `../src/augment.ts` (side-effect imported here
+ * and from the client entrypoints), not inline — see that file for why.
  */
-declare module '@adonisjs/inertia' {
-  interface Inertia<Pages> {
-    modal(component: string, props: ModalProps, backdrop: Backdrop): ModalResponse
-  }
-}
+import '../src/augment.ts'
 
 export default class ModalProvider {
   constructor(protected app: ApplicationService) {}

@@ -2,6 +2,10 @@
  * adonis-inertia-modal — React client entrypoint
  */
 
+// Carries the `inertia.modal(...)` type augmentation into the client tsconfig
+// program (type-only; emits no runtime import). See src/augment.ts.
+import '../../augment.ts'
+
 export { ModalStackProvider, type ModalStackProviderProps } from './modal_stack_provider.tsx'
 export { ModalRoot } from './modal_root.tsx'
 export { ModalRenderer } from './modal_renderer.tsx'

@@ -2,6 +2,10 @@
  * adonis-inertia-modal — Vue client entrypoint
  */
 
+// Carries the `inertia.modal(...)` type augmentation into the client tsconfig
+// program (type-only; emits no runtime import). See src/augment.ts.
+import '../../augment.ts'
+
 export { modal, createModalContext, type ModalPluginOptions } from './plugin.ts'
 export { ModalRoot } from './modal_root.ts'
 export { ModalRenderer } from './modal_renderer.ts'
