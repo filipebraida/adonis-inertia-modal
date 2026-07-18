@@ -7,6 +7,18 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
+### beta.7
+
+- **Types:** `inertia.modal(...)` is now typed in split-tsconfig setups. The
+  `declare module '@adonisjs/inertia'` merge only attached when the barrel was
+  loaded in the program, so a second TS program that never imports it — e.g. a
+  Tuyau client tsconfig that pulls controllers in through the generated registry
+  — saw `Property 'modal' does not exist`. The augmentation now lives in a shared
+  module that force-loads the barrel (type-only) and is delivered from the server
+  provider and the react/vue client entrypoints, so it reaches every program that
+  type-checks a caller. All type-only: no server code enters client bundles. No
+  consumer API change.
+
 ### beta.6
 
 - **React:** `useModalContainer()` now points to the modal panel (a descendant
