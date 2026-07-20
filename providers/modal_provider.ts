@@ -33,26 +33,24 @@ export default class ModalProvider {
     const router = await this.app.container.make('router')
 
     /**
-     * The `Inertia` class is not Macroable, but it is exported. We patch its
-     * prototype once at boot. `ctx` is a (runtime-accessible) protected field on
-     * every instance — this is the single coupling point with the adapter
-     * internals (see docs/design/spike-server-dispatch.md §4).
+     * The `Inertia` class is Macroable, so we register `modal()` through the
+     * standard AdonisJS extension mechanism. `ctx` is a (runtime-accessible)
+     * protected field on every instance — this is the single coupling point
+     * with the adapter internals (see docs/design/spike-server-dispatch.md §4).
      */
-    Inertia.prototype.modal = function (
-      this: Inertia<any>,
-      component: string,
-      props: ModalProps,
-      backdrop: Backdrop
-    ) {
-      const ctx = (this as unknown as { ctx: HttpContext }).ctx
-      return new ModalResponse(
-        this as unknown as InertiaLike,
-        ctx,
-        component,
-        props,
-        backdrop,
-        router
-      )
-    }
+    Inertia.macro(
+      'modal',
+      function (this: Inertia<any>, component: string, props: ModalProps, backdrop: Backdrop) {
+        const ctx = (this as unknown as { ctx: HttpContext }).ctx
+        return new ModalResponse(
+          this as unknown as InertiaLike,
+          ctx,
+          component,
+          props,
+          backdrop,
+          router
+        )
+      }
+    )
   }
 }
