@@ -76,7 +76,12 @@ export function ModalLink({
   children,
   ...rest
 }: ModalLinkProps) {
-  const { visit, prefetch: prefetchModal, navigate: doNavigate } = useModalStack()
+  const {
+    visit,
+    prefetch: prefetchModal,
+    navigate: doNavigate,
+    prefetchNavigate: doPrefetchNavigate,
+  } = useModalStack()
   const [loading, setLoading] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -86,12 +91,37 @@ export function ModalLink({
     return Array.isArray(prefetch) ? prefetch : [prefetch]
   }, [prefetch])
 
+  // Resolved once: the click and the prefetch both branch on it.
+  const navigateMode =
+    (navigate ?? (getConfig('navigate') as boolean | undefined) ?? false) && !href.startsWith('#')
+
   const doPrefetch = useCallback(() => {
     onPrefetching?.()
+
+    // A navigating click returns at doNavigate() without reaching visit(), the only
+    // reader of prefetchModal's cache — filling it would spend a request the click
+    // then discards and pays for again. Warm the cache doNavigate reads instead.
+    if (navigateMode) {
+      doPrefetchNavigate(href, { cacheFor })
+      onPrefetched?.()
+      return
+    }
+
     prefetchModal(href, { method, data, headers, cacheFor })
       .then(() => onPrefetched?.())
       .catch(() => {})
-  }, [prefetchModal, href, method, data, headers, cacheFor, onPrefetching, onPrefetched])
+  }, [
+    navigateMode,
+    doPrefetchNavigate,
+    prefetchModal,
+    href,
+    method,
+    data,
+    headers,
+    cacheFor,
+    onPrefetching,
+    onPrefetched,
+  ])
 
   useEffect(() => {
     if (prefetchModes.includes('mount')) {
@@ -130,8 +160,7 @@ export function ModalLink({
         return
       }
       // `navigate` mode: open the route as a full page instead of a modal.
-      const navigateMode = navigate ?? (getConfig('navigate') as boolean | undefined) ?? false
-      if (navigateMode && !href.startsWith('#')) {
+      if (navigateMode) {
         doNavigate(href)
         return
       }
@@ -157,7 +186,19 @@ export function ModalLink({
         setLoading(false)
       }
     },
-    [href, method, data, headers, config, slideover, history, navigate, loading, visit, doNavigate]
+    [
+      href,
+      method,
+      data,
+      headers,
+      config,
+      slideover,
+      history,
+      navigateMode,
+      loading,
+      visit,
+      doNavigate,
+    ]
   )
 
   const handleMouseEnter = useCallback(() => {

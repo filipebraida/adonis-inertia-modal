@@ -56,6 +56,7 @@ function renderApp(options: {
   page?: PageInfo
   client?: HttpClientLike
   navigate?: (url: string) => void
+  prefetchNavigate?: (url: string, options?: { cacheFor?: number }) => void
   ui?: React.ReactNode
   component?: React.ComponentType<any>
   resolve?: (name: string) => Promise<React.ComponentType<any>>
@@ -69,6 +70,7 @@ function renderApp(options: {
       httpClient={client}
       resolveComponent={resolve as never}
       navigate={options.navigate}
+      prefetchNavigate={options.prefetchNavigate}
     >
       {options.ui}
       <ModalRoot usePageHook={() => options.page ?? basePage} />
@@ -807,6 +809,68 @@ test.group('react | presentation & helpers', (group) => {
     assert.isNull(document.querySelector('dialog.im-dialog'))
   })
 
+  test('prefetching a navigate link warms the navigate cache, not the modal cache', async ({
+    assert,
+  }) => {
+    const warmed: Array<{ url: string; cacheFor?: number }> = []
+    let requested = false
+    const client: HttpClientLike = {
+      request: () => {
+        requested = true
+        return Promise.resolve({ data: { props: {} } })
+      },
+    }
+
+    renderApp({
+      client,
+      navigate: () => {},
+      prefetchNavigate: (url, options) => warmed.push({ url, cacheFor: options?.cacheFor }),
+      ui: (
+        <ModalLink href="/notes/new" navigate prefetch="mount" cacheFor={1234}>
+          New
+        </ModalLink>
+      ),
+    })
+
+    await waitFor(() => assert.lengthOf(warmed, 1))
+    assert.deepEqual(warmed[0], { url: '/notes/new', cacheFor: 1234 })
+
+    // The modal cache is never read by a navigating click, so filling it would
+    // spend a request the click then discards and pays for again.
+    assert.isFalse(requested)
+  })
+
+  test('prefetching a non-navigate link still fills the modal cache', async ({ assert }) => {
+    const warmed: string[] = []
+    let calls = 0
+    const client: HttpClientLike = {
+      request: () => {
+        calls += 1
+        return Promise.resolve({
+          data: { props: { modal: { component: 'users/show', props: {}, key: 'k1' } } },
+        })
+      },
+    }
+
+    renderApp({
+      client,
+      prefetchNavigate: (url) => warmed.push(url),
+      ui: (
+        <ModalLink href="/users/1" prefetch="mount">
+          Open
+        </ModalLink>
+      ),
+    })
+
+    await waitFor(() => assert.equal(calls, 1))
+    assert.isEmpty(warmed)
+
+    fireEvent.click(screen.getByText('Open'))
+
+    assert.isNotNull(await screen.findByText(/User:/))
+    assert.equal(calls, 1) // open reused the prefetched response
+  })
+
   test('getParentModal / getChildModal navigate the stack', async ({ assert }) => {
     function ModalA() {
       const m = useModal()!
@@ -972,9 +1036,7 @@ test.group('react | portal container', (group) => {
   test('useModalContainer() returns the panel of the enclosing <Modal>', async ({ assert }) => {
     function ContainerProbe() {
       const container = useModalContainer()
-      return (
-        <span data-testid="probe">{container ? (container.className ?? '') : 'null'}</span>
-      )
+      return <span data-testid="probe">{container ? (container.className ?? '') : 'null'}</span>
     }
     function Page() {
       return (

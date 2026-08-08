@@ -18,6 +18,8 @@ export interface ModalPluginOptions {
   httpClient?: HttpClientLike
   resolveComponent?: (name: string) => Promise<Component>
   navigate?: (url: string) => void
+  /** Warms the cache `navigate` reads. Defaults to router.prefetch; override alongside navigate. */
+  prefetchNavigate?: (url: string, options?: { cacheFor?: number }) => void
 }
 
 const EMPTY_PAGE: PageInfo = { component: '', url: '', props: {} }
@@ -36,6 +38,13 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
     options.resolveComponent ??
     ((name: string) => inertiaRouter.resolveComponent(name) as Promise<Component>)
   const navigate = options.navigate ?? ((url: string) => inertiaRouter.visit(url))
+  // Counterpart of navigate: navigate mode hands the click to Inertia's router,
+  // which reads Inertia's prefetch cache — not the PrefetchCache below, which only
+  // visit() reads.
+  const prefetchNavigate =
+    options.prefetchNavigate ??
+    ((url: string, prefetchOptions?: { cacheFor?: number }) =>
+      inertiaRouter.prefetch(url, {}, { cacheFor: prefetchOptions?.cacheFor ?? 30000 }))
 
   const cache = new PrefetchCache()
 
@@ -216,6 +225,7 @@ export function createModalContext(options: ModalPluginOptions = {}): ModalConte
     prefetch,
     syncPage,
     navigate,
+    prefetchNavigate,
   }
 }
 

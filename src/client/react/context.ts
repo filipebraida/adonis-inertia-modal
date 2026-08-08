@@ -25,6 +25,8 @@ export interface ModalStackContextValue {
   prefetch: (href: string, options?: PrefetchOptions) => Promise<void>
   /** Navigate the browser (full Inertia visit) — used by `navigate` mode. */
   navigate: (url: string) => void
+  /** Warm the cache `navigate` reads, so a prefetched `navigate` link opens without a request. */
+  prefetchNavigate: (url: string, options?: { cacheFor?: number }) => void
   /** Feed the current Inertia page into the provider (called by ModalRoot). */
   syncPage: (page: PageInfo) => void
 }

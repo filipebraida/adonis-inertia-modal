@@ -62,6 +62,7 @@ function mountApp(options: {
   page?: PageInfo
   client?: HttpClientLike
   navigate?: (url: string) => void
+  prefetchNavigate?: (url: string, options?: { cacheFor?: number }) => void
   ui?: () => VNode
   component?: VueComponent
   resolve?: (name: string) => Promise<VueComponent>
@@ -87,7 +88,12 @@ function mountApp(options: {
       plugins: [
         [
           modalPlugin,
-          { httpClient: client, resolveComponent: resolve, navigate: options.navigate },
+          {
+            httpClient: client,
+            resolveComponent: resolve,
+            navigate: options.navigate,
+            prefetchNavigate: options.prefetchNavigate,
+          },
         ],
       ],
     },
@@ -766,6 +772,69 @@ test.group('vue | presentation & helpers', (group) => {
     assert.equal(navigatedTo, '/notes/new')
     assert.isFalse(requested)
     assert.isNull(document.querySelector('dialog.im-dialog'))
+  })
+
+  test('prefetching a navigate link warms the navigate cache, not the modal cache', async ({
+    assert,
+  }) => {
+    const warmed: Array<{ url: string; cacheFor?: number }> = []
+    let requested = false
+    const client: HttpClientLike = {
+      request: () => {
+        requested = true
+        return Promise.resolve({ data: { props: {} } })
+      },
+    }
+
+    mountApp({
+      client,
+      navigate: () => {},
+      prefetchNavigate: (url, options) => warmed.push({ url, cacheFor: options?.cacheFor }),
+      ui: () =>
+        h(
+          ModalLink,
+          { href: '/notes/new', navigate: true, prefetch: 'mount', cacheFor: 1234 },
+          { default: () => 'New' }
+        ),
+    })
+
+    await tick()
+
+    assert.lengthOf(warmed, 1)
+    assert.deepEqual(warmed[0], { url: '/notes/new', cacheFor: 1234 })
+
+    // The modal cache is never read by a navigating click, so filling it would
+    // spend a request the click then discards and pays for again.
+    assert.isFalse(requested)
+  })
+
+  test('prefetching a non-navigate link still fills the modal cache', async ({ assert }) => {
+    const warmed: string[] = []
+    let calls = 0
+    const client: HttpClientLike = {
+      request: () => {
+        calls += 1
+        return Promise.resolve({
+          data: { props: { modal: { component: 'users/show', props: {}, key: 'k1' } } },
+        })
+      },
+    }
+
+    const { wrapper } = mountApp({
+      client,
+      prefetchNavigate: (url) => warmed.push(url),
+      ui: () => h(ModalLink, { href: '/users/1', prefetch: 'mount' }, { default: () => 'Open' }),
+    })
+
+    await tick()
+
+    assert.equal(calls, 1)
+    assert.isEmpty(warmed)
+
+    await clickText(wrapper, 'Open')
+    await tick()
+
+    assert.equal(calls, 1) // open reused the prefetched response
   })
 
   test('getParentModal / getChildModal navigate the stack', async ({ assert }) => {
