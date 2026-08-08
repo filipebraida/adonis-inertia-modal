@@ -201,6 +201,11 @@ only — Forward does not re-open a closed modal.
 With `navigate` (per-link, or `putConfig('navigate', true)` globally), the route opens
 as a **full page** instead of a modal — useful as a responsive opt-out on small screens.
 
+`prefetch` works in both modes, but they warm different caches: modal mode fills this
+package's, `navigate` mode calls Inertia's `router.prefetch`, which is what `router.visit`
+reads. Automatic — except if you pass a custom `navigate` to `ModalStackProvider` (React)
+or the plugin (Vue), in which case pass a matching `prefetchNavigate`.
+
 Opening a modal via link is a controlled partial request, **not** a page swap, so the
 backdrop page's form state and scroll position are preserved automatically.
 
@@ -340,7 +345,7 @@ Per-modal presentation comes from `config` (on `<ModalLink>`) or `putConfig`:
 `<Modal>` opens a native `<dialog>` in modal mode, which the browser promotes to
 its **top-layer** — a rendering layer above every other element, unreachable by
 z-index. Popover primitives from Radix, Base UI, Floating UI, shadcn/ui, etc.
-default to portaling their content to `document.body`, which lives *below* the
+default to portaling their content to `document.body`, which lives _below_ the
 `::backdrop` and stays invisible.
 
 Read the enclosing modal panel with `useModalContainer()` and pass it as the

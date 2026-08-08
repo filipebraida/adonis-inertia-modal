@@ -32,6 +32,8 @@ export interface ModalStackProviderProps {
   resolveComponent?: (name: string) => Promise<ComponentType>
   /** Navigates the browser (used when closing a deep-linked modal). */
   navigate?: (url: string) => void
+  /** Warms the cache `navigate` reads. Defaults to router.prefetch; override alongside navigate. */
+  prefetchNavigate?: (url: string, options?: { cacheFor?: number }) => void
 }
 
 const EMPTY_PAGE: PageInfo = { component: '', url: '', props: {} }
@@ -41,6 +43,7 @@ export function ModalStackProvider({
   httpClient,
   resolveComponent,
   navigate,
+  prefetchNavigate,
 }: ModalStackProviderProps) {
   const stackRef = useRef<ModalStack | null>(null)
   if (!stackRef.current) {
@@ -70,6 +73,16 @@ export function ModalStackProvider({
   const doNavigate = useMemo<(url: string) => void>(
     () => navigate ?? ((url) => inertiaRouter.visit(url)),
     [navigate]
+  )
+
+  // Counterpart of doNavigate: navigate mode hands the click to Inertia's router,
+  // which reads Inertia's prefetch cache — not the PrefetchCache below, which only
+  // visit() reads.
+  const doPrefetchNavigate = useMemo<(url: string, options?: { cacheFor?: number }) => void>(
+    () =>
+      prefetchNavigate ??
+      ((url, options) => inertiaRouter.prefetch(url, {}, { cacheFor: options?.cacheFor ?? 30000 })),
+    [prefetchNavigate]
   )
 
   /**
@@ -209,7 +222,10 @@ export function ModalStackProvider({
         if (options.onError) {
           options.onError(error)
         } else {
-          console.error('[adonis-inertia-modal] Failed to open modal (pass onError to handle):', error)
+          console.error(
+            '[adonis-inertia-modal] Failed to open modal (pass onError to handle):',
+            error
+          )
         }
         throw error
       }
@@ -326,6 +342,7 @@ export function ModalStackProvider({
     reload,
     prefetch,
     navigate: doNavigate,
+    prefetchNavigate: doPrefetchNavigate,
     syncPage,
   }
 

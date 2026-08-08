@@ -52,7 +52,12 @@ export const ModalLink = defineComponent({
   },
   emits: ['start', 'success', 'error', 'close', 'afterLeave', 'prefetching', 'prefetched'],
   setup(props, { slots, emit, attrs }) {
-    const { visit, prefetch: prefetchModal, navigate: doNavigate } = useModalStack()
+    const {
+      visit,
+      prefetch: prefetchModal,
+      navigate: doNavigate,
+      prefetchNavigate,
+    } = useModalStack()
     const loading = ref(false)
     // Only forward onError when the parent actually listens to @error; otherwise
     // leave it undefined so the context's default (console.error) kicks in.
@@ -66,8 +71,25 @@ export const ModalLink = defineComponent({
       return Array.isArray(props.prefetch) ? props.prefetch : [props.prefetch as PrefetchMode]
     })
 
+    // Resolved once: the click and the prefetch both branch on it.
+    const navigateMode = computed(
+      () =>
+        (props.navigate ?? (getConfig('navigate') as boolean | undefined) ?? false) &&
+        !props.href.startsWith('#')
+    )
+
     const doPrefetch = () => {
       emit('prefetching')
+
+      // A navigating click returns at doNavigate() without reaching visit(), the only
+      // reader of prefetchModal's cache — filling it would spend a request the click
+      // then discards and pays for again. Warm the cache doNavigate reads instead.
+      if (navigateMode.value) {
+        prefetchNavigate(props.href, { cacheFor: props.cacheFor })
+        emit('prefetched')
+        return
+      }
+
       prefetchModal(props.href, {
         method: props.method,
         data: props.data,
@@ -91,8 +113,7 @@ export const ModalLink = defineComponent({
       if (loading.value) return
 
       // `navigate` mode: open the route as a full page instead of a modal.
-      const navigateMode = props.navigate ?? (getConfig('navigate') as boolean | undefined) ?? false
-      if (navigateMode && !props.href.startsWith('#')) {
+      if (navigateMode.value) {
         doNavigate(props.href)
         return
       }

@@ -26,6 +26,8 @@ export interface ModalContext {
   /** Feed the current Inertia page into the context (called by ModalRoot). */
   syncPage: (page: PageInfo) => void
   navigate: (url: string) => void
+  /** Warm the cache `navigate` reads, so a prefetched `navigate` link opens without a request. */
+  prefetchNavigate: (url: string, options?: { cacheFor?: number }) => void
 }
 
 export const modalStackKey: InjectionKey<ModalContext> = Symbol('adonis-inertia-modal/stack')
