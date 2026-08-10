@@ -6,19 +6,71 @@
  * wrappers at the top level of the page props, and treats our `modal` prop as a
  * plain object — so deferred/optional/merge props nested under `modal.props`
  * would otherwise be serialized as raw wrapper objects. We re-implement the same
- * categorization here (the symbols are global `Symbol.for(...)`, so no adapter
- * import is needed). Resolved values stay as plain data / models; the adapter
- * serializes the whole `modal` object afterwards.
+ * categorization here, reading the adapter's own symbols so the two stay in
+ * lockstep. Resolved values stay as plain data / models; the adapter serializes
+ * the whole `modal` object afterwards.
  */
 
-const ALWAYS_PROP = Symbol.for('ALWAYS_PROP')
-const OPTIONAL_PROP = Symbol.for('OPTIONAL_PROP')
-const DEFERRED_PROP = Symbol.for('DEFERRED_PROP')
-const TO_BE_MERGED = Symbol.for('TO_BE_MERGED')
-const DEEP_MERGE = Symbol.for('DEEP_MERGE')
+import { symbols } from '@adonisjs/inertia'
+
+const {
+  ALWAYS_PROP,
+  OPTIONAL_PROP,
+  DEFERRED_PROP,
+  TO_BE_MERGED,
+  DEEP_MERGE,
+  ONCE_PROP,
+  SCROLL_PROP,
+} = symbols
 
 function isObject(value: unknown): value is Record<PropertyKey, any> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+/**
+ * Reject the Inertia v3 wrappers the modal envelope has no way to honour.
+ *
+ * `once()` and `scroll()` carry state the client can only act on through page
+ * object fields the envelope doesn't have (`onceProps`, `scrollProps`), so we
+ * would serialize the wrapper object itself into `modal.props` — the component
+ * receives `{ value: [Function], onceKey, expiry, fresh }` instead of its data.
+ * `defer(..., { rescue: true })` is the opposite failure: it resolves fine, but
+ * the promise it makes (render a fallback instead of failing) is one the modal
+ * client can't keep, so a rescued error would still take the reload down.
+ *
+ * Both are silent today, which is the worst of the options — fail where the
+ * mistake is written instead.
+ */
+function assertSupported(key: string, value: Record<PropertyKey, any>): void {
+  const reject = (feature: string, hint: string): never => {
+    throw new Error(
+      `adonis-inertia-modal: ${feature} is not supported inside modal props ("${key}"). ${hint}`
+    )
+  }
+
+  if (ONCE_PROP in value) {
+    reject(
+      'inertia.once()',
+      'Its cache metadata travels in the page object, which the modal envelope does not carry. ' +
+        'Pass the value directly, or put the once prop on the backdrop page.'
+    )
+  }
+
+  if (SCROLL_PROP in value) {
+    reject(
+      'inertia.scroll()',
+      'Infinite-scroll cursors travel in the page object, which the modal envelope does not carry. ' +
+        'Render the infinite scroll on the backdrop page instead.'
+    )
+  }
+
+  if (DEFERRED_PROP in value && value.rescue) {
+    reject(
+      'inertia.defer(..., { rescue: true })',
+      'The modal client has no rescue slot to render. Drop the option and handle failures via ' +
+        'modal.reload({ onError }).'
+    )
+  }
 }
 
 export interface ResolveModalPropsOptions {
@@ -85,6 +137,10 @@ export async function resolveModalProps(
 
   for (const [key, value] of Object.entries(input)) {
     if (isObject(value)) {
+      // Checked before any cherry-picking, so an unsupported wrapper is rejected
+      // on every visit rather than only on the reloads that happen to request it.
+      assertSupported(key, value)
+
       /**
        * Always props are included regardless of cherry-picking.
        */
@@ -129,6 +185,11 @@ export async function resolveModalProps(
         }
 
         const inner = value.value
+        if (isObject(inner)) {
+          // e.g. `merge(defer(fn, { rescue: true }))` — the wrapper we can't
+          // honour is the inner one.
+          assertSupported(key, inner)
+        }
         if (isObject(inner) && DEFERRED_PROP in inner) {
           if (partial) {
             if (isLazyRequested(key)) {

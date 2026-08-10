@@ -297,6 +297,13 @@ import { Deferred, WhenVisible } from 'adonis-inertia-modal/react'
 </WhenVisible>
 ```
 
+`inertia.defer()`, `inertia.optional()` and `inertia.always()` work inside modal
+props. The Inertia v3 wrappers whose state lives in the page object — `inertia.once()`,
+`inertia.scroll()` and `inertia.defer(..., { rescue: true })` — do not: the modal
+travels as a single `modal` prop and the envelope has nowhere to carry their
+metadata. Using one throws with the offending prop name instead of silently
+sending the wrapper object to your component. Put those on the backdrop page.
+
 ### Nested, slideover & event bus
 
 ```tsx

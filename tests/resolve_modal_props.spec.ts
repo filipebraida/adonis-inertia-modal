@@ -85,3 +85,68 @@ test.group('resolveModalProps | partial reload', () => {
     assert.isFalse(auditComputed)
   })
 })
+
+test.group('resolveModalProps | unsupported v3 wrappers', () => {
+  test('rejects inertia.once() instead of leaking the wrapper into the props', async ({
+    assert,
+  }) => {
+    await assert.rejects(
+      () => resolveModalProps({ lookups: inertia.once(() => ['a']) }),
+      /inertia\.once\(\) is not supported inside modal props \("lookups"\)/
+    )
+  })
+
+  test('rejects inertia.scroll()', async ({ assert }) => {
+    await assert.rejects(
+      () =>
+        resolveModalProps({
+          feed: inertia.scroll({ data: [1] }, () => ({
+            pageName: 'page',
+            currentPage: 1,
+            nextPage: 2,
+            previousPage: null,
+          })),
+        }),
+      /inertia\.scroll\(\) is not supported inside modal props \("feed"\)/
+    )
+  })
+
+  test('rejects a rescued deferred prop, whose promise the modal client cannot keep', async ({
+    assert,
+  }) => {
+    await assert.rejects(
+      () => resolveModalProps({ perms: inertia.defer(() => ['read'], { rescue: true }) }),
+      /rescue: true.*is not supported inside modal props \("perms"\)/
+    )
+  })
+
+  test('rejects an unsupported wrapper nested inside merge()', async ({ assert }) => {
+    await assert.rejects(
+      () =>
+        resolveModalProps({
+          rows: inertia.merge(inertia.defer(() => [1], { rescue: true })),
+        }),
+      /is not supported inside modal props \("rows"\)/
+    )
+  })
+
+  test('rejects even when the prop is filtered out of a partial reload', async ({ assert }) => {
+    await assert.rejects(
+      () => resolveModalProps({ lookups: inertia.once(() => ['a']) }, { partial: true, only: [] }),
+      /inertia\.once\(\)/
+    )
+  })
+
+  test('still accepts the wrappers the modal envelope does support', async ({ assert }) => {
+    const resolved = await resolveModalProps({
+      stats: inertia.defer(() => ({ visits: 1 })),
+      audit: inertia.optional(() => ['entry']),
+      perms: inertia.always(['read']),
+      items: inertia.merge([1]),
+    })
+
+    assert.deepEqual(resolved.deferred, { default: ['stats'] })
+    assert.deepEqual(resolved.mergeProps, ['items'])
+    assert.deepEqual(resolved.props.perms, ['read'])
+  })
+})
