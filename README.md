@@ -34,8 +34,8 @@ The modal is delivered as a shared `modal` prop on a normal Inertia page, so:
 ## Requirements
 
 - `@adonisjs/core` ^7
-- `@adonisjs/inertia` ^4 (Inertia v2 client) — forward-compatible with ^5 (v3)
-- React 18/19 + `@inertiajs/react` ^2, **or** Vue 3 + `@inertiajs/vue3` ^2
+- `@adonisjs/inertia` ^5 (Inertia v3 client)
+- React 19 + `@inertiajs/react` ^3, **or** Vue 3 + `@inertiajs/vue3` ^3
 
 ## Install
 
