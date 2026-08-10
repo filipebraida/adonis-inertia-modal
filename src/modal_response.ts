@@ -9,7 +9,7 @@
 import { randomUUID } from 'node:crypto'
 import type { HttpContext } from '@adonisjs/core/http'
 import { BaseSerializer } from '@adonisjs/core/transformers'
-import { InertiaHeaders } from '@adonisjs/inertia'
+import type { RequestInfo } from '@adonisjs/inertia/types'
 
 import { ModalHeaders } from './headers.ts'
 import { resolveModalProps, type ResolveModalPropsOptions } from './resolve_modal_props.ts'
@@ -31,12 +31,14 @@ const modalSerializer = new ModalSerializer()
 
 /**
  * Minimal surface of the per-request Inertia instance we rely on. The adapter's
- * real `Inertia` type can't be used here: its `share()` requires `JSONDataTypes`
- * (an index signature) which our typed `ModalPayload` envelope doesn't satisfy.
+ * real `Inertia` type can't be used here: `share()` takes `PageProps`, whose
+ * values must be `JSONDataTypes` — our envelope carries `props` as
+ * `Record<string, unknown>` (serialization happens later), so it doesn't fit.
  */
 export interface InertiaLike {
   share(state: Record<string, unknown>): unknown
   render(component: string, props: Record<string, unknown>): unknown
+  requestInfo(): RequestInfo
 }
 
 /**
@@ -143,9 +145,7 @@ export class ModalResponse {
   }
 
   async #render(): Promise<unknown> {
-    const request = this.ctx.request
-    const isInertia = !!request.header(InertiaHeaders.Inertia)
-    const partialComponent = request.header(InertiaHeaders.PartialComponent)
+    const { isInertiaRequest, partialComponent } = this.inertia.requestInfo()
 
     /**
      * Share the modal envelope so whichever backdrop renders carries it as the
@@ -158,7 +158,7 @@ export class ModalResponse {
      * backdrop component requesting only the `modal` prop. Re-render that exact
      * component; Inertia keeps the page and merges `props.modal`.
      */
-    if (isInertia && partialComponent && !this.#refreshBackdrop) {
+    if (isInertiaRequest && partialComponent && !this.#refreshBackdrop) {
       this.ctx.response.header(ModalHeaders.Modal, 'true')
       return this.inertia.render(partialComponent, {})
     }
@@ -285,12 +285,14 @@ export class ModalResponse {
     const strip = (entries: string[]) =>
       entries.filter((entry) => entry.startsWith(prefix)).map((entry) => entry.slice(prefix.length))
 
-    const only = strip(this.#headerList(InertiaHeaders.PartialOnly))
+    const { onlyProps, exceptProps } = this.inertia.requestInfo()
+
+    const only = strip(this.#normalize(onlyProps))
     if (only.length > 0) {
       return { partial: true, only }
     }
 
-    const except = strip(this.#headerList(InertiaHeaders.PartialExcept))
+    const except = strip(this.#normalize(exceptProps))
     if (except.length > 0) {
       return { partial: true, except }
     }
@@ -308,7 +310,9 @@ export class ModalResponse {
 
     const request = this.ctx.request
     const headerRedirect = request.header(ModalHeaders.Redirect)
-    const referer = request.header(InertiaHeaders.Inertia) ? request.header('referer') : undefined
+    const referer = this.inertia.requestInfo().isInertiaRequest
+      ? request.header('referer')
+      : undefined
     const candidate = headerRedirect ?? referer
 
     return (candidate && this.#sameOriginPath(candidate)) || this.#resolveBaseUrl()
@@ -353,8 +357,8 @@ export class ModalResponse {
   }
 
   #isSparseModalReload(): boolean {
-    const request = this.ctx.request
-    if (!request.header(InertiaHeaders.PartialComponent)) {
+    const { isPartialRequest, onlyProps, exceptProps } = this.inertia.requestInfo()
+    if (!isPartialRequest) {
       return false
     }
 
@@ -362,8 +366,8 @@ export class ModalResponse {
       entries.some((entry) => entry.startsWith('modal.props.'))
 
     return (
-      targetsModalProps(this.#headerList(InertiaHeaders.PartialOnly)) ||
-      targetsModalProps(this.#headerList(InertiaHeaders.PartialExcept))
+      targetsModalProps(this.#normalize(onlyProps)) ||
+      targetsModalProps(this.#normalize(exceptProps))
     )
   }
 
@@ -377,11 +381,13 @@ export class ModalResponse {
     return !!errors && Object.keys(errors).length > 0
   }
 
-  #headerList(header: string): string[] {
-    return (this.ctx.request.header(header) ?? '')
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean)
+  /**
+   * The adapter splits the partial-reload headers on `,` without trimming, so a
+   * hand-written `only: ['a', 'b']` header would yield a leading space. Tidy the
+   * entries before matching them against the `modal.props.` prefix.
+   */
+  #normalize(entries: string[] | undefined): string[] {
+    return (entries ?? []).map((entry) => entry.trim()).filter(Boolean)
   }
 
   #resolveBaseUrl(): string {
