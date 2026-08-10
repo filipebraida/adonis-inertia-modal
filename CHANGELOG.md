@@ -7,6 +7,36 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 First usable release. React and Vue 3 support.
 
+### beta.8
+
+- **Breaking — requires `@adonisjs/inertia` ^5 (Inertia v3).** The provider
+  registers `modal()` through `Inertia.macro()`, and `Macroable` only landed on
+  the `Inertia` class in 5.0.0-next.3 ([adonisjs/inertia#102]), so v4 no longer
+  type-checks (`Property 'macro' does not exist on type 'typeof Inertia'`). The
+  client adapters move to `@inertiajs/react` / `@inertiajs/vue3` ^3, which in
+  turn drops React 18 — `@inertiajs/react@3` peers on `react` ^19.
+- **Client:** a modal is no longer re-opened on the page you just navigated to.
+  Inertia v3 instant visits pre-render the destination with the current page's
+  shared props carried forward, and the modal travels as a shared prop, so the
+  new page could arrive still carrying the modal that was on screen. It is now
+  recognised by its key (the server mints a fresh one for every response except
+  a sparse reload, which keeps the same URL) and ignored.
+- **Server:** `inertia.once()`, `inertia.scroll()` and
+  `inertia.defer(..., { rescue: true })` now throw when used inside modal props,
+  naming the offending prop. The first two used to serialize the wrapper object
+  itself into `modal.props` (your component received
+  `{ value: [Function], onceKey, … }` instead of its data); the third silently
+  dropped the rescue flag, giving the opposite of the resilience it asks for.
+  `defer`, `optional`, `always` and `merge` are unaffected.
+- **Stubs:** the example controller called `.baseRoute(...)`, a method that never
+  shipped, and passed two arguments where the backdrop has been a required third
+  one since beta.3. It now matches the real signature.
+- **Internal:** prop-wrapper symbols and request info are read from the adapter
+  (`symbols`, `inertia.requestInfo()`) instead of being re-derived from headers
+  and `Symbol.for(...)`. No consumer API change.
+
+[adonisjs/inertia#102]: https://github.com/adonisjs/inertia/pull/102
+
 ### beta.7
 
 - **Types:** `inertia.modal(...)` is now typed in split-tsconfig setups. The
