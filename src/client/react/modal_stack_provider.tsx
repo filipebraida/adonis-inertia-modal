@@ -17,6 +17,7 @@ import { router as inertiaRouter } from '@inertiajs/react'
 import { createFetchClient } from '../core/fetch_client.ts'
 import { ModalHistory } from '../core/history.ts'
 import { ModalLocationError, requestModal, type HttpClientLike } from '../core/open.ts'
+import { isCarriedOverPageModal, type PageModalSnapshot } from '../core/page_modal.ts'
 import { PrefetchCache } from '../core/prefetch_cache.ts'
 import { generateId, ModalStack } from '../core/stack.ts'
 import type { ModalEntry, ModalResponsePayload } from '../core/types.ts'
@@ -79,7 +80,7 @@ export function ModalStackProvider({
   const [page, setPage] = useState<PageInfo>(EMPTY_PAGE)
   const pageRef = useRef(page)
   pageRef.current = page
-  const prevUrlRef = useRef<string | undefined>(undefined)
+  const prevPageRef = useRef<PageModalSnapshot | undefined>(undefined)
   const syncPage = useCallback((next: PageInfo) => setPage(next), [])
 
   // Close the popped modal directly (Back already removed the browser entry).
@@ -271,10 +272,20 @@ export function ModalStackProvider({
      * a successful form submit that redirects to a page without a modal. Cleared
      * silently (no onClose) since we're already on the new page.
      */
-    const navigated = prevUrlRef.current !== undefined && prevUrlRef.current !== page.url
-    prevUrlRef.current = page.url
+    const previous = prevPageRef.current
+    prevPageRef.current = { url: page.url, modalKey: pageModal?.key }
+    const navigated = previous !== undefined && previous.url !== page.url
     if (navigated) {
       stackInstance.reset()
+    }
+
+    /**
+     * An instant visit can drag the modal we were just showing onto the new
+     * page (it travels as a shared prop). Adopting it would re-open a modal the
+     * user has navigated away from.
+     */
+    if (isCarriedOverPageModal(navigated, pageModal?.key, previous)) {
+      return
     }
 
     if (!pageModal || !pageModal.key || stackInstance.get(pageModal.key)) {

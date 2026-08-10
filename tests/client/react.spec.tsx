@@ -221,6 +221,76 @@ test.group('react | deep-link (page props modal)', (group) => {
       assert.equal((document.querySelectorAll('.im-dialog') as ArrayLike<unknown>).length, 0)
     )
   })
+
+  test('an instant visit that carries the modal forward does not re-open it', async ({
+    assert,
+  }) => {
+    function Harness({ getPage }: { getPage: () => PageInfo }) {
+      return (
+        <ModalStackProvider
+          httpClient={clientReturning({ component: 'users/show', props: {}, key: 'x' })}
+          resolveComponent={async () => ShowUser as never}
+        >
+          <ModalRoot usePageHook={getPage} />
+        </ModalStackProvider>
+      )
+    }
+
+    let page: PageInfo = {
+      component: 'users/index',
+      url: '/m/new',
+      props: { modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' } },
+    }
+    const { rerender } = render(<Harness getPage={() => page} />)
+    await screen.findByText('User: A')
+
+    /**
+     * Inertia v3 instant visit: the destination page is rendered with the shared
+     * props of the page we came from, so the SAME modal payload (same key) rides
+     * along to a different URL. It must not be adopted as a new modal.
+     */
+    page = {
+      component: 'users/index',
+      url: '/other',
+      props: { modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' } },
+    }
+    rerender(<Harness getPage={() => page} />)
+
+    await waitFor(() =>
+      assert.equal((document.querySelectorAll('.im-dialog') as ArrayLike<unknown>).length, 0)
+    )
+  })
+
+  test('a genuine modal on a new URL is still adopted after a navigation', async ({ assert }) => {
+    function Harness({ getPage }: { getPage: () => PageInfo }) {
+      return (
+        <ModalStackProvider
+          httpClient={clientReturning({ component: 'users/show', props: {}, key: 'x' })}
+          resolveComponent={async () => ShowUser as never}
+        >
+          <ModalRoot usePageHook={getPage} />
+        </ModalStackProvider>
+      )
+    }
+
+    let page: PageInfo = {
+      component: 'users/index',
+      url: '/m/new',
+      props: { modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' } },
+    }
+    const { rerender } = render(<Harness getPage={() => page} />)
+    await screen.findByText('User: A')
+
+    // Different URL AND a server-minted key: a real second deep link.
+    page = {
+      component: 'users/index',
+      url: '/m/other',
+      props: { modal: { component: 'users/show', props: { name: 'B' }, key: 'k2', baseUrl: '/m' } },
+    }
+    rerender(<Harness getPage={() => page} />)
+
+    assert.isNotNull(await screen.findByText('User: B'))
+  })
 })
 
 test.group('react | forms & reload', (group) => {

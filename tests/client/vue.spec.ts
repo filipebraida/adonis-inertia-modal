@@ -267,6 +267,62 @@ test.group('vue | deep-link (page props modal)', (group) => {
 
     assert.equal(document.querySelectorAll('.im-dialog').length, 0)
   })
+
+  test('an instant visit that carries the modal forward does not re-open it', async ({
+    assert,
+  }) => {
+    const { page } = mountApp({
+      page: {
+        component: 'users/index',
+        url: '/m/new',
+        version: '1',
+        props: {
+          modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' },
+        },
+      },
+    })
+
+    await tick()
+    assert.equal(document.querySelectorAll('.im-dialog').length, 1)
+
+    /**
+     * Inertia v3 instant visit: the destination page is rendered with the shared
+     * props of the page we came from, so the SAME modal payload (same key) rides
+     * along to a different URL. It must not be adopted as a new modal.
+     */
+    page.url = '/other'
+    page.props = {
+      modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' },
+    }
+    await tick()
+
+    assert.equal(document.querySelectorAll('.im-dialog').length, 0)
+  })
+
+  test('a genuine modal on a new URL is still adopted after a navigation', async ({ assert }) => {
+    const { wrapper, page } = mountApp({
+      page: {
+        component: 'users/index',
+        url: '/m/new',
+        version: '1',
+        props: {
+          modal: { component: 'users/show', props: { name: 'A' }, key: 'k1', baseUrl: '/m' },
+        },
+      },
+    })
+
+    await tick()
+    assert.include(wrapper.text(), 'User: A')
+
+    // Different URL AND a server-minted key: a real second deep link.
+    page.url = '/m/other'
+    page.props = {
+      modal: { component: 'users/show', props: { name: 'B' }, key: 'k2', baseUrl: '/m' },
+    }
+    await tick()
+
+    assert.include(wrapper.text(), 'User: B')
+  })
 })
 
 test.group('vue | forms & reload', (group) => {
