@@ -8,7 +8,6 @@
 */
 
 export { configure } from './configure.ts'
-export { stubsRoot } from './stubs/main.ts'
 
 export { ModalResponse } from './src/modal_response.ts'
 export { ModalHeaders } from './src/headers.ts'
