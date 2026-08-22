@@ -1,11 +1,10 @@
 /*
-|--------------------------------------------------------------------------
-| Package entrypoint
-|--------------------------------------------------------------------------
-|
-| Export values from the package entrypoint as you see fit.
-|
-*/
+ * adonis-inertia-modal — package entrypoint (server side)
+ *
+ * The client entrypoints live at `adonis-inertia-modal/react` and
+ * `adonis-inertia-modal/vue`; the provider at
+ * `adonis-inertia-modal/modal_provider`.
+ */
 
 export { configure } from './configure.ts'
 
