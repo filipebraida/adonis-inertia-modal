@@ -1,0 +1,75 @@
+name: Bug report
+description: Something behaves differently than documented
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The fastest fixes come from issues that show the
+        controller returning the modal next to the component receiving it.
+
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: What happens
+      description: What you observed, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Steps, plus the relevant code. A link to a minimal repo is ideal; the
+        controller action and the modal component usually tell most of the story.
+      placeholder: |
+        ```ts
+        // app/controllers/users_controller.ts
+        return inertia.modal('users/show', { user }, { route: 'users.index' })
+        ```
+
+        ```tsx
+        // inertia/pages/users/show.tsx
+        <Modal>{({ close }) => ...}</Modal>
+        ```
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: Client
+      options:
+        - React
+        - Vue 3
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: adonis-inertia-modal version
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: adonis-versions
+    attributes:
+      label: '@adonisjs/inertia and @inertiajs/* versions'
+      placeholder: '@adonisjs/inertia 5.0.1, @inertiajs/react 3.7.0'
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: |
+        Errors from the server or the browser console, whether it happens on a
+        deep link vs. a link click, SSR on or off — whatever narrowed it down
+        for you.
+    validations:
+      required: false

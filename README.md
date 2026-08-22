@@ -446,6 +446,12 @@ server-side rendering won't crash. A deep-linked modal's backdrop is rendered on
 the server; the modal itself mounts after client hydration (it is not yet part of
 the initial server HTML). Rendering deep-linked modals during SSR is planned.
 
+## Contributing
+
+Bug reports, reproductions and pull requests are welcome — see
+[CONTRIBUTING.md](./CONTRIBUTING.md) for the setup, the checks and how PRs are
+integrated.
+
 ## Credits
 
 Architecture inspired by [inertiaui/modal](https://github.com/inertiaui/modal),

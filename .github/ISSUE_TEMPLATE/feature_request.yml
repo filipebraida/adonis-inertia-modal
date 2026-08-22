@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest a capability the package does not have yet
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: |
+        What are you trying to build, and where does the package get in the way?
+        Describe the situation rather than the API you have in mind — it often
+        turns out there is already a way, or a better shape than either of us
+        would have guessed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: An API sketch, if you have one. Rough is fine.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: Which side does this affect
+      options:
+        - Server (inertia.modal and friends)
+        - React client
+        - Vue client
+        - Both clients
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: Workarounds you already attempted, and why they fell short.
+    validations:
+      required: false
