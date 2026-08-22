@@ -4,9 +4,10 @@ import { Config } from '../../src/client/core/config.ts'
 import { EventEmitter } from '../../src/client/core/event_emitter.ts'
 import { ModalStack } from '../../src/client/core/stack.ts'
 import { buildModalRequest, parseModalPayload } from '../../src/client/core/request.ts'
-import { serializeParams } from '../../src/client/core/fetch_client.ts'
+import { createFetchClient, serializeParams } from '../../src/client/core/fetch_client.ts'
 import { lockBodyScroll } from '../../src/client/core/scroll_lock.ts'
 import { ModalHistory } from '../../src/client/core/history.ts'
+import type { HttpClientLike } from '../../src/client/core/open.ts'
 import { PrefetchCache } from '../../src/client/core/prefetch_cache.ts'
 import { resolvePanelClasses } from '../../src/client/core/presentation.ts'
 import type { ModalResponsePayload } from '../../src/client/core/types.ts'
@@ -105,6 +106,132 @@ test.group('core | serializeParams', () => {
   test('serializes nested objects and skips null/undefined', ({ assert }) => {
     const q = decodeURIComponent(serializeParams({ filter: { status: 'open' }, a: null, b: 1 }))
     assert.equal(q, 'filter[status]=open&b=1')
+  })
+})
+
+test.group('core | createFetchClient', (group) => {
+  const originalFetch = globalThis.fetch
+
+  group.each.teardown(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  /**
+   * Swap in a fetch that records what it was called with and resolves a minimal
+   * Response — only the members the client actually reads.
+   */
+  function stubFetch(
+    response: {
+      body?: string
+      status?: number
+      headers?: Record<string, string>
+      redirected?: boolean
+      url?: string
+    } = {}
+  ) {
+    const calls: Array<{ url: string; init: any }> = []
+    globalThis.fetch = ((url: string, init: any) => {
+      calls.push({ url, init })
+      return Promise.resolve({
+        text: () => Promise.resolve(response.body ?? ''),
+        status: response.status ?? 200,
+        headers: new Headers(response.headers ?? {}),
+        redirected: response.redirected ?? false,
+        url: response.url ?? url,
+      })
+    }) as unknown as typeof globalThis.fetch
+    return calls
+  }
+
+  function requestConfig(overrides: Partial<Parameters<HttpClientLike['request']>[0]> = {}) {
+    return {
+      url: '/notes/1',
+      method: 'get',
+      data: undefined,
+      params: undefined,
+      headers: {},
+      ...overrides,
+    }
+  }
+
+  test('appends serialized params, joining onto an existing query string', async ({ assert }) => {
+    const calls = stubFetch()
+
+    await createFetchClient().request(requestConfig({ params: { tags: [1, 2] } }))
+    assert.equal(decodeURIComponent(calls[0].url), '/notes/1?tags[]=1&tags[]=2')
+
+    await createFetchClient().request(
+      requestConfig({ url: '/notes/1?page=2', params: { tags: [1] } })
+    )
+    assert.equal(decodeURIComponent(calls[1].url), '/notes/1?page=2&tags[]=1')
+
+    await createFetchClient().request(
+      requestConfig({ params: { tags: [1, 2] }, queryStringArrayFormat: 'indices' })
+    )
+    assert.equal(decodeURIComponent(calls[2].url), '/notes/1?tags[0]=1&tags[1]=2')
+  })
+
+  test('leaves the URL alone when params are absent or empty', async ({ assert }) => {
+    const calls = stubFetch()
+
+    await createFetchClient().request(requestConfig())
+    await createFetchClient().request(requestConfig({ params: {} }))
+
+    assert.equal(calls[0].url, '/notes/1')
+    assert.equal(calls[1].url, '/notes/1')
+  })
+
+  test('uppercases the method and sends credentials', async ({ assert }) => {
+    const calls = stubFetch()
+
+    await createFetchClient().request(requestConfig({ method: 'post' }))
+
+    assert.equal(calls[0].init.method, 'POST')
+    assert.equal(calls[0].init.credentials, 'same-origin')
+  })
+
+  test('sends a JSON body and its Content-Type only when there is data', async ({ assert }) => {
+    const calls = stubFetch()
+
+    await createFetchClient().request(
+      requestConfig({ method: 'post', data: { title: 'x' }, headers: { 'X-Custom': '1' } })
+    )
+    assert.equal(calls[0].init.body, JSON.stringify({ title: 'x' }))
+    assert.equal(calls[0].init.headers['Content-Type'], 'application/json')
+    assert.equal(calls[0].init.headers['X-Custom'], '1')
+
+    await createFetchClient().request(requestConfig({ headers: { 'X-Custom': '1' } }))
+    assert.isUndefined(calls[1].init.body)
+    assert.notProperty(calls[1].init.headers, 'Content-Type')
+  })
+
+  test('parses a JSON body and maps the response metadata', async ({ assert }) => {
+    stubFetch({
+      body: JSON.stringify({ props: { modal: { component: 'users/show' } } }),
+      status: 200,
+      headers: { 'x-inertia': 'true' },
+      redirected: true,
+      url: '/notes/1?after=redirect',
+    })
+
+    const response = await createFetchClient().request(requestConfig())
+
+    assert.deepEqual(response.data, { props: { modal: { component: 'users/show' } } })
+    assert.equal(response.status, 200)
+    assert.deepEqual(response.headers, { 'x-inertia': 'true' })
+    assert.isTrue(response.redirected)
+    assert.equal(response.url, '/notes/1?after=redirect')
+  })
+
+  test('hands a non-JSON body through as text for parseModalPayload to reject', async ({
+    assert,
+  }) => {
+    stubFetch({ body: '<!doctype html><html>login</html>', status: 200 })
+
+    const response = await createFetchClient().request(requestConfig())
+
+    assert.equal(response.data, '<!doctype html><html>login</html>')
+    assert.isNull(parseModalPayload(response.data)) // rejected downstream, not here
   })
 })
 
