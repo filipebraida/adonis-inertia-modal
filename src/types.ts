@@ -42,8 +42,4 @@ export interface ModalPayload {
   key: string
   /** Deferred prop names by group, for the client's <Deferred> component. */
   deferred?: Record<string, string[]>
-  /** Modal prop names to shallow-merge on the client. */
-  mergeProps?: string[]
-  /** Modal prop names to deep-merge on the client. */
-  deepMergeProps?: string[]
 }

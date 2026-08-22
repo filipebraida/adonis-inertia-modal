@@ -231,7 +231,7 @@ export class ModalResponse {
   }
 
   /**
-   * Build the modal envelope, resolving defer/optional/merge/always wrappers and
+   * Build the modal envelope, resolving defer/optional/always wrappers and
    * dot-notation inside `modal.props`.
    */
   async #buildPayload(): Promise<ModalPayload> {
@@ -247,12 +247,6 @@ export class ModalResponse {
 
     if (Object.keys(resolved.deferred).length > 0) {
       payload.deferred = resolved.deferred
-    }
-    if (resolved.mergeProps.length > 0) {
-      payload.mergeProps = resolved.mergeProps
-    }
-    if (resolved.deepMergeProps.length > 0) {
-      payload.deepMergeProps = resolved.deepMergeProps
     }
 
     return payload

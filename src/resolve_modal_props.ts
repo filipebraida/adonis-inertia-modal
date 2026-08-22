@@ -1,27 +1,20 @@
 /*
  * adonis-inertia-modal
  *
- * Resolves the adapter's prop wrappers (defer/optional/always/merge) *inside*
+ * Resolves the adapter's prop wrappers (defer/optional/always) *inside*
  * `modal.props`. The AdonisJS Inertia adapter only processes these symbol-tagged
  * wrappers at the top level of the page props, and treats our `modal` prop as a
- * plain object — so deferred/optional/merge props nested under `modal.props`
- * would otherwise be serialized as raw wrapper objects. We re-implement the same
+ * plain object — so deferred/optional props nested under `modal.props` would
+ * otherwise be serialized as raw wrapper objects. We re-implement the same
  * categorization here, reading the adapter's own symbols so the two stay in
  * lockstep. Resolved values stay as plain data / models; the adapter serializes
- * the whole `modal` object afterwards.
+ * the whole `modal` object afterwards. The wrappers the envelope cannot honour
+ * are rejected instead — see `assertSupported`.
  */
 
 import { symbols } from '@adonisjs/inertia'
 
-const {
-  ALWAYS_PROP,
-  OPTIONAL_PROP,
-  DEFERRED_PROP,
-  TO_BE_MERGED,
-  DEEP_MERGE,
-  ONCE_PROP,
-  SCROLL_PROP,
-} = symbols
+const { ALWAYS_PROP, OPTIONAL_PROP, DEFERRED_PROP, TO_BE_MERGED, ONCE_PROP, SCROLL_PROP } = symbols
 
 function isObject(value: unknown): value is Record<PropertyKey, any> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -38,8 +31,16 @@ function isObject(value: unknown): value is Record<PropertyKey, any> {
  * the promise it makes (render a fallback instead of failing) is one the modal
  * client can't keep, so a rescued error would still take the reload down.
  *
- * Both are silent today, which is the worst of the options — fail where the
- * mistake is written instead.
+ * `merge()` / `deepMerge()` unwrap cleanly but never merge: a reloaded modal
+ * prop replaces the previous value wholesale (the stack's `updateProps` is a
+ * shallow spread), so the accumulation the wrapper promises never happens. The
+ * keyed and directional variants v5 added carry their intent in `MERGE_PREPEND`
+ * and `MERGE_MATCH_ON`, two more fields the envelope has nowhere to put.
+ * Accumulating props belong on the backdrop page, where the adapter's own
+ * `mergeProps` / `matchPropsOn` reach the client intact.
+ *
+ * All three are silent today, which is the worst of the options — fail where
+ * the mistake is written instead.
  */
 function assertSupported(key: string, value: Record<PropertyKey, any>): void {
   const reject = (feature: string, hint: string): never => {
@@ -71,6 +72,15 @@ function assertSupported(key: string, value: Record<PropertyKey, any>): void {
         'modal.reload({ onError }).'
     )
   }
+
+  if (TO_BE_MERGED in value) {
+    reject(
+      'inertia.merge() / inertia.deepMerge()',
+      'A reloaded modal prop replaces the previous value instead of accumulating onto it, and ' +
+        'the merge metadata travels in the page object, which the modal envelope does not carry. ' +
+        'Put the accumulating prop on the backdrop page instead.'
+    )
+  }
 }
 
 export interface ResolveModalPropsOptions {
@@ -86,8 +96,6 @@ export interface ResolvedModalProps {
   props: Record<string, unknown>
   /** group -> deferred prop names (for the client's <Deferred>). */
   deferred: Record<string, string[]>
-  mergeProps: string[]
-  deepMergeProps: string[]
 }
 
 /**
@@ -120,8 +128,6 @@ export async function resolveModalProps(
 ): Promise<ResolvedModalProps> {
   const { partial = false, only, except } = options
   const deferred: Record<string, string[]> = {}
-  const mergeProps: string[] = []
-  const deepMergeProps: string[] = []
   const pending: Array<{ key: string; value: unknown | (() => unknown) }> = []
 
   const isCherryPicked = (key: string): boolean => {
@@ -177,35 +183,6 @@ export async function resolveModalProps(
         continue
       }
 
-      if (TO_BE_MERGED in value) {
-        if (value[DEEP_MERGE]) {
-          deepMergeProps.push(key)
-        } else {
-          mergeProps.push(key)
-        }
-
-        const inner = value.value
-        if (isObject(inner)) {
-          // e.g. `merge(defer(fn, { rescue: true }))` — the wrapper we can't
-          // honour is the inner one.
-          assertSupported(key, inner)
-        }
-        if (isObject(inner) && DEFERRED_PROP in inner) {
-          if (partial) {
-            if (isLazyRequested(key)) {
-              pending.push({ key, value: inner.compute })
-            }
-          } else {
-            const group = inner.group ?? 'default'
-            deferred[group] = deferred[group] ?? []
-            deferred[group].push(key)
-          }
-        } else {
-          pending.push({ key, value: inner })
-        }
-        continue
-      }
-
       pending.push({ key, value })
     } else {
       if (partial && !isCherryPicked(key)) {
@@ -222,5 +199,5 @@ export async function resolveModalProps(
     })
   )
 
-  return { props: nestDotProps(flat), deferred, mergeProps, deepMergeProps }
+  return { props: nestDotProps(flat), deferred }
 }

@@ -29,16 +29,14 @@ test.group('resolveModalProps | standard visit', () => {
     assert.deepEqual(resolved.deferred, { default: ['stats'] })
   })
 
-  test('marks merge props and unwraps their value', async ({ assert }) => {
+  test('leaves plain values and dot-notation keys untouched', async ({ assert }) => {
     const resolved = await resolveModalProps({
-      items: inertia.merge([1, 2]),
-      settings: inertia.deepMerge({ a: 1 }),
+      'user': { id: 1 },
+      'counts.open': 2,
     })
 
-    assert.deepEqual(resolved.props.items, [1, 2])
-    assert.deepEqual(resolved.props.settings, { a: 1 })
-    assert.deepEqual(resolved.mergeProps, ['items'])
-    assert.deepEqual(resolved.deepMergeProps, ['settings'])
+    assert.deepEqual(resolved.props, { user: { id: 1 }, counts: { open: 2 } })
+    assert.deepEqual(resolved.deferred, {})
   })
 })
 
@@ -120,12 +118,21 @@ test.group('resolveModalProps | unsupported v3 wrappers', () => {
     )
   })
 
-  test('rejects an unsupported wrapper nested inside merge()', async ({ assert }) => {
+  test('rejects merge() and deepMerge()', async ({ assert }) => {
     await assert.rejects(
-      () =>
-        resolveModalProps({
-          rows: inertia.merge(inertia.defer(() => [1], { rescue: true })),
-        }),
+      () => resolveModalProps({ items: inertia.merge([1, 2]) }),
+      /inertia\.merge\(\).*is not supported inside modal props \("items"\)/
+    )
+
+    await assert.rejects(
+      () => resolveModalProps({ settings: inertia.deepMerge({ a: 1 }) }),
+      /is not supported inside modal props \("settings"\)/
+    )
+  })
+
+  test('rejects the keyed and directional merge variants v5 added', async ({ assert }) => {
+    await assert.rejects(
+      () => resolveModalProps({ rows: inertia.merge([1]).prepend().matchOn('id') }),
       /is not supported inside modal props \("rows"\)/
     )
   })
@@ -142,11 +149,9 @@ test.group('resolveModalProps | unsupported v3 wrappers', () => {
       stats: inertia.defer(() => ({ visits: 1 })),
       audit: inertia.optional(() => ['entry']),
       perms: inertia.always(['read']),
-      items: inertia.merge([1]),
     })
 
     assert.deepEqual(resolved.deferred, { default: ['stats'] })
-    assert.deepEqual(resolved.mergeProps, ['items'])
     assert.deepEqual(resolved.props.perms, ['read'])
   })
 })
