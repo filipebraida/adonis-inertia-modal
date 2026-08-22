@@ -1,3 +1,7 @@
 allowBuilds:
   '@swc/core': true
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@adonisjs/core@7.5.0'
+  - '@adonisjs/inertia@5.0.1'
+  - eslint@10.9.0
