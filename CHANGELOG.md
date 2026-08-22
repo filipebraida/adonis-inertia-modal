@@ -3,9 +3,54 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
-## 0.1.0 — Unreleased
+## 1.0.0 — Unreleased
 
-First usable release. React and Vue 3 support.
+First stable release. React and Vue 3 support.
+
+### rc.1
+
+- **Breaking — `inertia.merge()` and `inertia.deepMerge()` are rejected inside
+  modal props.** beta.8 turned away the v3 wrappers the modal envelope cannot
+  carry and left `merge` on the supported list; it never belonged there. The
+  envelope emitted `mergeProps`/`deepMergeProps` and no client ever read them,
+  so a reloaded modal prop replaced the previous value wholesale instead of
+  accumulating onto it. Inertia v5 widened the gap: `merge()` became chainable
+  (`.prepend()`, `.append()`, `.matchOn(key)`) and that intent lives in two more
+  symbols the envelope has nowhere to put. Supporting it properly means shipping
+  deep-merge semantics, both merge directions, `matchOn` dedupe and a `reset`
+  path on modal reload, and keeping all four in step with the adapter — while
+  infinite scroll, the main thing merge accumulates for, is already turned away
+  here. Put accumulating props on the backdrop page, where the adapter's own
+  `mergeProps`/`matchPropsOn` reach the client intact. `defer`, `optional` and
+  `always` are unaffected. Rejecting is breaking, so it lands before 1.0;
+  supporting it later would be additive.
+- **Client:** `prefetch` on a `navigate` link reached the wrong cache. A
+  navigating click hands off to Inertia's router and never reaches `visit()`,
+  the only reader of this package's prefetch cache — so the prefetch spent a
+  request, stored the payload where nothing would look for it, and the click
+  fetched the same route again, doubling traffic instead of saving any. It now
+  warms Inertia's own cache via `router.prefetch`. `ModalStackProvider` (React)
+  and the plugin (Vue) accept `prefetchNavigate` for apps that override
+  `navigate`, defaulting to `router.prefetch` as `navigate` defaults to
+  `router.visit`. Thanks to [@muco-rolle] ([#1]). Note that `onPrefetched` fires
+  on dispatch in `navigate` mode — `router.prefetch` returns nothing to await.
+- **Client:** `navigate` mode is read when the click happens rather than when
+  the link renders. `Config` is a module singleton with no subscription, so a
+  mode captured at render froze at whatever it was when the link mounted and a
+  `putConfig('navigate', true)` issued afterwards never reached the click.
+- **Internal:** the dev matrix moved onto the current stable upstream —
+  `@adonisjs/core` 7.5.0, `@adonisjs/inertia` 5.0.1, `@inertiajs/*` 3.7.0. All
+  three are on `latest` with no prerelease channel ahead of them, which is what
+  makes this line releasable: the churn the betas absorbed was the Inertia v3
+  migration, and it has settled. No protocol changes ride along.
+
+[@muco-rolle]: https://github.com/muco-rolle
+[#1]: https://github.com/filipebraida/adonis-inertia-modal/pull/1
+
+## 0.1.0 prereleases
+
+The alpha and beta line that led here. No final 0.1.0 was released — the work
+graduated straight to 1.0.
 
 ### beta.8
 
