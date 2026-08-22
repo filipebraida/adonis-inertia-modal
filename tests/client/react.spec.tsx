@@ -879,6 +879,35 @@ test.group('react | presentation & helpers', (group) => {
     assert.isNull(document.querySelector('dialog.im-dialog'))
   })
 
+  test('navigate mode turned on by putConfig after mount is honoured', async ({ assert }) => {
+    let navigatedTo: string | null = null
+    let requested = false
+    const client: HttpClientLike = {
+      request: () => {
+        requested = true
+        return Promise.resolve({ data: { props: {} } })
+      },
+    }
+
+    // The link mounts with navigate off — the global default arrives afterwards,
+    // and `putConfig` cannot re-render it, so the click has to read it fresh.
+    renderApp({
+      client,
+      navigate: (url) => (navigatedTo = url),
+      ui: <ModalLink href="/notes/new">New</ModalLink>,
+    })
+
+    putConfig('navigate', true)
+    try {
+      fireEvent.click(screen.getByText('New'))
+
+      assert.equal(navigatedTo, '/notes/new')
+      assert.isFalse(requested)
+    } finally {
+      resetConfig()
+    }
+  })
+
   test('prefetching a navigate link warms the navigate cache, not the modal cache', async ({
     assert,
   }) => {

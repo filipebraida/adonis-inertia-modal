@@ -830,6 +830,38 @@ test.group('vue | presentation & helpers', (group) => {
     assert.isNull(document.querySelector('dialog.im-dialog'))
   })
 
+  test('navigate mode turned on by putConfig after mount is honoured', async ({ assert }) => {
+    let navigatedTo: string | null = null
+    const client: HttpClientLike = {
+      request: () =>
+        Promise.resolve({
+          data: { props: { modal: { component: 'users/show', props: {}, key: 'k1' } } },
+        }),
+    }
+
+    // `prefetch: 'mount'` makes the link read the mode while still off, which is
+    // what a cached read would freeze. The global default arrives afterwards and
+    // cannot re-render the link, so the click has to read it fresh.
+    const { wrapper } = mountApp({
+      client,
+      navigate: (url) => (navigatedTo = url),
+      ui: () => h(ModalLink, { href: '/notes/new', prefetch: 'mount' }, { default: () => 'New' }),
+    })
+
+    await tick()
+
+    putConfig('navigate', true)
+    try {
+      await clickText(wrapper, 'New')
+      await tick()
+
+      assert.equal(navigatedTo, '/notes/new')
+      assert.isNull(document.querySelector('dialog.im-dialog')) // navigated, no modal
+    } finally {
+      resetConfig()
+    }
+  })
+
   test('prefetching a navigate link warms the navigate cache, not the modal cache', async ({
     assert,
   }) => {

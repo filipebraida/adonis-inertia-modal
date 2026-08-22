@@ -204,7 +204,9 @@ as a **full page** instead of a modal — useful as a responsive opt-out on smal
 `prefetch` works in both modes, but they warm different caches: modal mode fills this
 package's, `navigate` mode calls Inertia's `router.prefetch`, which is what `router.visit`
 reads. Automatic — except if you pass a custom `navigate` to `ModalStackProvider` (React)
-or the plugin (Vue), in which case pass a matching `prefetchNavigate`.
+or the plugin (Vue), in which case pass a matching `prefetchNavigate`. One difference
+worth knowing: in `navigate` mode `onPrefetched` fires when the prefetch is dispatched
+rather than when it lands — `router.prefetch` returns nothing to await.
 
 Opening a modal via link is a controlled partial request, **not** a page swap, so the
 backdrop page's form state and scroll position are preserved automatically.

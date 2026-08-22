@@ -91,9 +91,16 @@ export function ModalLink({
     return Array.isArray(prefetch) ? prefetch : [prefetch]
   }, [prefetch])
 
-  // Resolved once: the click and the prefetch both branch on it.
-  const navigateMode =
-    (navigate ?? (getConfig('navigate') as boolean | undefined) ?? false) && !href.startsWith('#')
+  // Shared by the click and the prefetch, and read at call time rather than
+  // captured during render: `putConfig` writes to a module singleton with no
+  // subscription, so a value snapshotted at render would miss a global default
+  // the app sets after this link mounted — which a click used to pick up.
+  const isNavigateMode = useCallback(
+    () =>
+      (navigate ?? (getConfig('navigate') as boolean | undefined) ?? false) &&
+      !href.startsWith('#'),
+    [navigate, href]
+  )
 
   const doPrefetch = useCallback(() => {
     onPrefetching?.()
@@ -101,7 +108,7 @@ export function ModalLink({
     // A navigating click returns at doNavigate() without reaching visit(), the only
     // reader of prefetchModal's cache — filling it would spend a request the click
     // then discards and pays for again. Warm the cache doNavigate reads instead.
-    if (navigateMode) {
+    if (isNavigateMode()) {
       doPrefetchNavigate(href, { cacheFor })
       onPrefetched?.()
       return
@@ -111,7 +118,7 @@ export function ModalLink({
       .then(() => onPrefetched?.())
       .catch(() => {})
   }, [
-    navigateMode,
+    isNavigateMode,
     doPrefetchNavigate,
     prefetchModal,
     href,
@@ -160,7 +167,7 @@ export function ModalLink({
         return
       }
       // `navigate` mode: open the route as a full page instead of a modal.
-      if (navigateMode) {
+      if (isNavigateMode()) {
         doNavigate(href)
         return
       }
@@ -194,7 +201,7 @@ export function ModalLink({
       config,
       slideover,
       history,
-      navigateMode,
+      isNavigateMode,
       loading,
       visit,
       doNavigate,

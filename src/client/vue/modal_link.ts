@@ -71,12 +71,13 @@ export const ModalLink = defineComponent({
       return Array.isArray(props.prefetch) ? props.prefetch : [props.prefetch as PrefetchMode]
     })
 
-    // Resolved once: the click and the prefetch both branch on it.
-    const navigateMode = computed(
-      () =>
-        (props.navigate ?? (getConfig('navigate') as boolean | undefined) ?? false) &&
-        !props.href.startsWith('#')
-    )
+    // Shared by the click and the prefetch, and deliberately a plain function
+    // rather than a computed: `putConfig` writes to a module singleton with no
+    // subscription, so a computed would cache its first read and never see a
+    // global default the app sets after this link mounted.
+    const isNavigateMode = () =>
+      (props.navigate ?? (getConfig('navigate') as boolean | undefined) ?? false) &&
+      !props.href.startsWith('#')
 
     const doPrefetch = () => {
       emit('prefetching')
@@ -84,7 +85,7 @@ export const ModalLink = defineComponent({
       // A navigating click returns at doNavigate() without reaching visit(), the only
       // reader of prefetchModal's cache — filling it would spend a request the click
       // then discards and pays for again. Warm the cache doNavigate reads instead.
-      if (navigateMode.value) {
+      if (isNavigateMode()) {
         prefetchNavigate(props.href, { cacheFor: props.cacheFor })
         emit('prefetched')
         return
@@ -113,7 +114,7 @@ export const ModalLink = defineComponent({
       if (loading.value) return
 
       // `navigate` mode: open the route as a full page instead of a modal.
-      if (navigateMode.value) {
+      if (isNavigateMode()) {
         doNavigate(props.href)
         return
       }
