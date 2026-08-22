@@ -16,6 +16,7 @@ import { Modal } from '../../src/client/vue/modal.ts'
 import { Deferred } from '../../src/client/vue/deferred.ts'
 import { HeadlessModal } from '../../src/client/vue/headless_modal.ts'
 import { useModalStack } from '../../src/client/vue/context.ts'
+import { useModalContainer } from '../../src/client/vue/modal_container_context.ts'
 import useModal from '../../src/client/vue/use_modal.ts'
 import { putConfig, resetConfig } from '../../src/client/core/config.ts'
 import type { HttpClientLike } from '../../src/client/core/open.ts'
@@ -1094,5 +1095,113 @@ test.group('vue | error handling', (group) => {
     } finally {
       console.error = original
     }
+  })
+})
+
+test.group('vue | portal container', (group) => {
+  group.each.teardown(() => {
+    wrappers.splice(0).forEach((w) => w.unmount())
+  })
+
+  test('useModalContainer() resolves to the panel of the enclosing <Modal>', async ({ assert }) => {
+    const ContainerProbe = defineComponent({
+      setup() {
+        const container = useModalContainer()
+        return () =>
+          h(
+            'span',
+            { 'data-testid': 'probe' },
+            container.value ? (container.value.className ?? '') : 'null'
+          )
+      },
+    })
+    const Page = defineComponent({
+      setup() {
+        return () => h(Modal, null, { default: () => h(ContainerProbe) })
+      },
+    })
+
+    const { wrapper } = mountApp({
+      client: clientReturning({ component: 'users/show', props: {}, key: 'k1' }),
+      component: Page,
+      ui: () => h(ModalLink, { href: '/users/1' }, { default: () => 'Open' }),
+    })
+
+    await clickText(wrapper, 'Open')
+    await tick()
+
+    const probe = document.querySelector('[data-testid="probe"]')
+    assert.match(probe?.textContent ?? '', /(^|\s)im-panel(\s|$)/)
+    // The panel is a descendant of the <dialog>, so a popover portaled here
+    // inherits the top-layer.
+    assert.isNotNull(probe?.closest('dialog'))
+  })
+
+  test('useModalContainer() stays null when used outside a <Modal>', ({ assert }) => {
+    let seen: HTMLElement | null | undefined
+    const Probe = defineComponent({
+      setup() {
+        seen = useModalContainer().value
+        return () => null
+      },
+    })
+    const wrapper = mount(Probe)
+    wrappers.push(wrapper)
+    assert.isNull(seen ?? null)
+  })
+
+  test('stacked modals: inner useModalContainer() resolves to the inner <dialog>', async ({
+    assert,
+  }) => {
+    const InnerProbe = defineComponent({
+      setup() {
+        const container = useModalContainer()
+        return () =>
+          h(
+            'span',
+            { 'data-testid': 'inner-probe' },
+            container.value?.closest('dialog')?.getAttribute('data-modal-index') ?? 'null'
+          )
+      },
+    })
+    const Inner = defineComponent({
+      setup() {
+        return () => h(Modal, null, { default: () => h(InnerProbe) })
+      },
+    })
+    const Outer = defineComponent({
+      setup() {
+        return () =>
+          h(Modal, null, {
+            default: () => h(ModalLink, { href: '/inner' }, { default: () => 'open-inner' }),
+          })
+      },
+    })
+
+    const client: HttpClientLike = {
+      request: ({ url }) =>
+        Promise.resolve({
+          data: {
+            props: {
+              modal: url.includes('/inner')
+                ? { component: 'inner', props: {}, key: 'ki' }
+                : { component: 'outer', props: {}, key: 'ko' },
+            },
+          },
+        }),
+    }
+
+    const { wrapper } = mountApp({
+      client,
+      resolve: async (name) => (name === 'inner' ? Inner : Outer),
+      ui: () => h(ModalLink, { href: '/outer' }, { default: () => 'open-outer' }),
+    })
+
+    await clickText(wrapper, 'open-outer')
+    await tick()
+    await clickText(wrapper, 'open-inner')
+    await tick()
+
+    assert.equal(document.querySelector('[data-testid="inner-probe"]')?.textContent, '1')
   })
 })

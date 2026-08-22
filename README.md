@@ -377,6 +377,28 @@ export function AppSelect(props: Select.SelectProps) {
 }
 ```
 
+In Vue, `useModalContainer()` returns a `ShallowRef` (the panel only exists
+after mount), so read `.value` — or hand the ref itself to primitives that
+accept one:
+
+```vue
+<script setup lang="ts">
+import { useModalContainer } from 'adonis-inertia-modal/vue'
+import { SelectRoot, SelectTrigger, SelectPortal, SelectContent } from 'reka-ui'
+
+const container = useModalContainer()
+</script>
+
+<template>
+  <SelectRoot>
+    <SelectTrigger />
+    <SelectPortal :to="container ?? undefined">
+      <SelectContent><!-- ... --></SelectContent>
+    </SelectPortal>
+  </SelectRoot>
+</template>
+```
+
 Stacked modals resolve automatically: each `<Modal>` provides its own container,
 so a popover inside the innermost modal portals into the innermost dialog.
 

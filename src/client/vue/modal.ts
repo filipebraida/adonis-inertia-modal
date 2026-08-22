@@ -2,13 +2,23 @@
  * adonis-inertia-modal — Vue client
  */
 
-import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  defineComponent,
+  h,
+  onBeforeUnmount,
+  onMounted,
+  provide,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
 
 import { getConfigByType } from '../core/config.ts'
 import { mergePresentation, resolvePanelClasses } from '../core/presentation.ts'
 import { lockBodyScroll } from '../core/scroll_lock.ts'
 import { leaveDurationMs } from '../core/transition.ts'
 import { useModalStack } from './context.ts'
+import { modalContainerKey } from './modal_container_context.ts'
 import { useResolvedModal } from './use_modal.ts'
 
 /**
@@ -45,6 +55,10 @@ export const Modal = defineComponent({
     const modal = useResolvedModal(props.name)
     const stack = useModalStack()
     const dialog = ref<HTMLDialogElement | null>(null)
+    // The panel element, exposed to descendants via useModalContainer() so
+    // popovers can portal inside the top-layer. See modal_container_context.ts.
+    const panel = shallowRef<HTMLElement | null>(null)
+    provide(modalContainerKey, panel)
 
     let closed = false
     let unlockScroll: (() => void) | null = null
@@ -83,7 +97,6 @@ export const Modal = defineComponent({
     // (fires onAfterLeave). Synchronous when no transition is defined.
     const playLeave = (id: string) => {
       const el = dialog.value
-      const panel = el?.querySelector<HTMLElement>('.im-panel') ?? null
       const finish = () => {
         if (el?.open) {
           if (typeof el.close === 'function') el.close()
@@ -91,7 +104,7 @@ export const Modal = defineComponent({
         }
         stack.remove(id)
       }
-      const ms = el ? leaveDurationMs(el, panel) : 0
+      const ms = el ? leaveDurationMs(el, panel.value) : 0
       if (ms <= 0) {
         finish()
         return
@@ -211,6 +224,7 @@ export const Modal = defineComponent({
           h(
             'div',
             {
+              ref: panel,
               class: resolvePanelClasses(config, isSlideover),
               onClick: (event: MouseEvent) => event.stopPropagation(),
             },

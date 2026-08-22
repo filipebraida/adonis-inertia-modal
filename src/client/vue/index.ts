@@ -23,6 +23,7 @@ export {
   modalIndexKey,
   type ModalContext,
 } from './context.ts'
+export { modalContainerKey, useModalContainer } from './modal_container_context.ts'
 export type {
   PageInfo,
   VisitOptions,
