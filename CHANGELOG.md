@@ -3,9 +3,28 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
-## 1.0.0 — Unreleased
+## 1.0.0 — 2026-08-22
 
 First stable release. React and Vue 3 support.
+
+### Since rc.1
+
+- **Vue:** `useModalContainer()` now exists on the Vue side too, closing the
+  one real gap in the README's "identical across React and Vue" promise. Same
+  escape hatch as React — popover primitives that portal to `document.body`
+  land under the `<dialog>`'s `::backdrop`; portal them into the panel instead.
+  Returns a `ShallowRef` (the panel only exists after mount); outside a
+  `<Modal>` it stays `null`.
+- **Configure:** `node ace configure` now prints the wiring for the adapter
+  the app actually uses (detected from `@inertiajs/react` / `@inertiajs/vue3`
+  in its package.json) instead of always printing React imports. Ambiguous
+  apps get both.
+- **Breaking (vs rc.1):** the unused stub machinery is gone — the embedded
+  `controller_example.stub` no code path could generate, and the `stubsRoot`
+  export that pointed at it. The example lives in the README.
+- **Packaging:** every export subpath now declares its `types` explicitly
+  (previously found via the resolver fallback; behaviour verified unchanged),
+  and the default fetch client went from 54% to fully covered.
 
 ### rc.1
 
