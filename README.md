@@ -1,3 +1,5 @@
+
+
 # adonis-inertia-modal
 
 Backend-driven modals for [Inertia.js](https://inertiajs.com) on
@@ -33,6 +35,7 @@ The modal is delivered as a shared `modal` prop on a normal Inertia page, so:
 
 ## Requirements
 
+- Node.js `>=24.0.0`
 - `@adonisjs/core` ^7
 - `@adonisjs/inertia` ^5 (Inertia v3 client)
 - React 19 + `@inertiajs/react` ^3, **or** Vue 3 + `@inertiajs/vue3` ^3
